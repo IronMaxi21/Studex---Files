@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  What the hardened runtime has to let through.
+
+  Notarisation requires the hardened runtime, and the hardened runtime shuts
+  off three things Studex genuinely needs. Each hole here is one Apple asks you
+  to justify, so each is written down rather than copied from a forum post.
+
+  There is deliberately no App Sandbox key. Studex runs its own backend as a
+  child process on a loopback port and keeps a SQLite database beside it; the
+  sandbox forbids both, and pretending otherwise would produce an app that
+  passes review and then cannot start.
+-->
+<plist version="1.0">
+<dict>
+  <!-- Two JavaScript engines run inside this app: JavaScriptCore, behind the
+       WKWebView that draws the whole interface, and V8, inside the Node child
+       process that serves it. Both compile to machine code at runtime. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+
+  <!-- V8 falls back to plain writable-executable pages on some paths, which
+       the MAP_JIT entitlement above does not cover. Without this, the backend
+       exits during startup rather than at a point anyone could diagnose. -->
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <!-- better-sqlite3 is a native addon: Node dlopen()s better_sqlite3.node at
+       startup. Library validation only admits code signed by the same team as
+       the process loading it, and the loading process here is Apple's own Node
+       binary, so the addon would be refused however carefully it was signed. -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+</dict>
+</plist>

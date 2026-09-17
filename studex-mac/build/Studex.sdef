@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
+<!--
+  What Studex can be asked to do from a script — which is also what Shortcuts
+  can ask it, through the Run AppleScript action. See App/Automation.swift for
+  why this is scripting and not App Intents.
+
+  The Standard Suite is pulled in wholesale rather than described again: it is
+  where `quit`, `run` and the rest come from, and it is also where the
+  `application` class is defined. Studex adds a property to that class instead
+  of redeclaring it — a class here that says it inherits from `application`
+  would be naming itself, and Cocoa walks that chain until the app stops
+  answering.
+-->
+<dictionary title="Studex Terminology" xmlns:xi="http://www.w3.org/2003/XInclude">
+  <xi:include href="file:///System/Library/ScriptingDefinitions/CocoaStandard.sdef"
+              xpointer="xpointer(/dictionary/suite)"/>
+
+  <suite name="Studex Suite" code="Stdx" description="Revision, from outside the app.">
+
+    <class-extension extends="application" description="The Studex application.">
+      <cocoa class="NSApplication"/>
+      <property name="cards due" code="Cdue" type="integer" access="r"
+                description="How many flashcards are due for review right now.">
+        <cocoa key="studexCardsDue"/>
+      </property>
+    </class-extension>
+
+    <command name="add exam" code="StdxAexm"
+             description="Opens the sheet for adding an exam or an assignment.">
+      <cocoa class="AddExamCommand"/>
+    </command>
+
+    <command name="show screen" code="StdxShow"
+             description="Shows one of the app's screens, such as review, calendar or topics.">
+      <cocoa class="ShowRouteCommand"/>
+      <direct-parameter type="text" description="The screen to show."/>
+      <parameter name="new window" code="Nwin" type="boolean" optional="yes"
+                 description="Open it in a window of its own rather than reusing the one in front.">
+        <cocoa key="inNewWindow"/>
+      </parameter>
+    </command>
+
+  </suite>
+</dictionary>

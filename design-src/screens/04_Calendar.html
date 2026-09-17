@@ -1,0 +1,118 @@
+data-screen-label="04 Calendar" style="display:flex;flex-direction:column;gap:12px">
+    <sc-if value="{{ showFrameLabels }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:baseline;gap:12px"><span style="font:400 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--color-accent)">04</span><span style="font:500 15px/1 var(--font-heading)">Calendar</span><span style="font:400 12.5px/1 var(--font-body);color:var(--color-neutral-600)">Month view, exams, deadlines and study blocks</span></div></sc-if>
+    <div style="width:1440px;border:1px solid var(--color-neutral-800);border-radius:var(--radius-lg);overflow:hidden;background:var(--color-bg);box-shadow:var(--shadow-lg)">
+      <div style="display:flex;height:820px;font-size:13px">
+        <div style="width:246px;border-right:1px solid var(--color-divider);background:color-mix(in srgb, var(--color-bg) 90%, #000);padding:16px 12px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:9px;font:600 15px/1 var(--font-heading);padding:2px 6px 4px"><span style="width:17px;height:17px;border-radius:var(--radius-sm);border:1.5px solid var(--color-accent)"></span>Studex</div>
+          <div style="display:flex;flex-direction:column;gap:2px;color:var(--color-neutral-400)">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px"><i class="ph ph-house" style="font-size:15px"></i>Home</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px"><i class="ph ph-graduation-cap" style="font-size:15px"></i>Study<span style="margin-left:auto;color:var(--color-neutral-600);font-size:11.5px">64 due</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;background:color-mix(in srgb, var(--color-accent) 14%, transparent);color:var(--color-text)"><i class="ph ph-calendar-blank" style="color:var(--color-accent);font-size:15px"></i>Calendar</div>
+            <div style="padding:6px 10px 6px 34px;color:var(--color-accent-300)">Month</div>
+            <div style="padding:6px 10px 6px 34px;color:var(--color-neutral-500)">Week</div>
+            <div style="padding:6px 10px 6px 34px;color:var(--color-neutral-500)">Deadlines</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px"><i class="ph ph-clock-countdown" style="font-size:15px"></i>Timetable</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px"><i class="ph ph-chart-line-up" style="font-size:15px"></i>Statistics</div>
+          </div>
+          <div style="font:400 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--color-neutral-600);padding:10px 10px 2px">SHOWING</div>
+          <div style="display:flex;flex-direction:column;gap:3px;color:var(--color-neutral-400)">
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 10px"><span style="width:11px;height:11px;border-radius:3px;background:oklch(0.734 0.09 289)"></span>Chemistry</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 10px"><span style="width:11px;height:11px;border-radius:3px;background:oklch(0.734 0.09 214)"></span>History A2</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 10px"><span style="width:11px;height:11px;border-radius:3px;background:oklch(0.734 0.09 154)"></span>Maths</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 10px"><span style="width:11px;height:11px;border-radius:3px;background:oklch(0.734 0.09 94)"></span>Biology</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;color:var(--color-neutral-600)"><span style="width:11px;height:11px;border-radius:3px;border:1px solid var(--color-neutral-700)"></span>Study blocks</div>
+          </div>
+          <div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:8px 10px;color:var(--color-neutral-400)"><span style="width:24px;height:24px;border-radius:50%;background:var(--color-accent-800);border:1px solid var(--color-accent-700)"></span>Aisha K.</div>
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--color-divider)">
+            <div style="font:500 16px/1 var(--font-heading);letter-spacing:-.02em">May 2026</div>
+            <div style="display:flex;gap:10px;color:var(--color-neutral-500);font-size:14px"><i class="ph ph-caret-left"></i><i class="ph ph-caret-right"></i></div>
+            <span style="padding:6px 11px;border:1px solid var(--color-neutral-800);border-radius:7px;color:var(--color-neutral-400);font-size:12px">Today</span>
+            <div style="margin-left:auto;display:flex;gap:2px;padding:2px;border:1px solid var(--color-neutral-800);border-radius:7px">
+              <span style="padding:6px 12px;border-radius:5px;background:color-mix(in srgb, var(--color-accent) 16%, transparent);color:var(--color-accent-300);font-size:12px">Month</span>
+              <span style="padding:6px 12px;font-size:12px;color:var(--color-neutral-500)">Week</span>
+              <span style="padding:6px 12px;font-size:12px;color:var(--color-neutral-500)">Agenda</span>
+            </div>
+            <span style="display:flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--color-accent);border-radius:7px;color:var(--color-accent-300);font-size:12px;background:color-mix(in srgb, var(--color-accent) 8%, transparent)"><i class="ph-bold ph-plus"></i>Add exam or deadline</span>
+          </div>
+
+          <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--color-divider);font:400 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--color-neutral-600)">
+              <div style="padding:11px 12px">MON</div><div style="padding:11px 12px">TUE</div><div style="padding:11px 12px">WED</div><div style="padding:11px 12px">THU</div><div style="padding:11px 12px">FRI</div><div style="padding:11px 12px;color:var(--color-neutral-700)">SAT</div><div style="padding:11px 12px;color:var(--color-neutral-700)">SUN</div>
+            </div>
+            <div style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr">
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;color:var(--color-neutral-700);font-size:12px">27</div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;color:var(--color-neutral-700);font-size:12px">28</div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;color:var(--color-neutral-700);font-size:12px">29</div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;color:var(--color-neutral-700);font-size:12px">30</div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-400)">1</div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-600);background:color-mix(in srgb, var(--color-bg) 94%, #000)">2</div>
+              <div style="border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-600);background:color-mix(in srgb, var(--color-bg) 94%, #000)">3</div>
+
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">4<span style="padding:4px 7px;border-radius:5px;border-left:2px solid oklch(0.734 0.09 154);background:var(--color-surface);font-size:11px;color:var(--color-neutral-300)">Maths problem set</span></div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-400)">5</div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">6<span style="padding:4px 7px;border-radius:5px;border-left:2px solid oklch(0.734 0.09 289);background:var(--color-surface);font-size:11px;color:var(--color-neutral-300)">Titration prac</span></div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-400)">7</div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">8<span style="padding:4px 7px;border-radius:5px;border-left:2px solid oklch(0.734 0.09 214);background:var(--color-surface);font-size:11px;color:var(--color-neutral-300)">Essay 1 in</span></div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-600);background:color-mix(in srgb, var(--color-bg) 94%, #000)">9</div>
+              <div style="border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-600);background:color-mix(in srgb, var(--color-bg) 94%, #000)">10</div>
+
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-400)">11</div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">12<span style="padding:4px 7px;border-radius:5px;border-left:2px solid oklch(0.734 0.09 94);background:var(--color-surface);font-size:11px;color:var(--color-neutral-300)">Bio required prac</span></div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-400)">13</div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">14<span style="padding:4px 7px;border-radius:5px;border-left:2px solid oklch(0.734 0.09 289);background:var(--color-surface);font-size:11px;color:var(--color-neutral-300)">Chem Paper 1</span></div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-400)">15</div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-600);background:color-mix(in srgb, var(--color-bg) 94%, #000)">16</div>
+              <div style="border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-600);background:color-mix(in srgb, var(--color-bg) 94%, #000)">17</div>
+
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">18<span style="padding:4px 7px;border-radius:5px;border-left:2px solid var(--color-neutral-700);background:var(--color-surface);font-size:11px;color:var(--color-neutral-400)">Revision 2h</span></div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">19<span style="padding:4px 7px;border-radius:5px;border-left:2px solid var(--color-neutral-700);background:var(--color-surface);font-size:11px;color:var(--color-neutral-400)">Revision 2h</span></div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">20<span style="padding:4px 7px;border-radius:5px;border-left:2px solid oklch(0.734 0.09 214);background:var(--color-surface);font-size:11px;color:var(--color-neutral-300)">History seminar</span></div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;background:color-mix(in srgb, var(--color-accent) 8%, transparent)">
+                <span style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--color-text)"><span style="width:20px;height:20px;border-radius:50%;background:var(--color-accent);color:var(--color-bg);display:flex;align-items:center;justify-content:center;font:600 11px/1 var(--font-body)">21</span>Today</span>
+                <span style="padding:4px 7px;border-radius:5px;border-left:2px solid oklch(0.734 0.09 289);background:var(--color-surface);font-size:11px;color:var(--color-neutral-300)">Equilibria 45m</span>
+                <span style="padding:4px 7px;border-radius:5px;border-left:2px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 14%, transparent);font-size:11px;color:var(--color-accent-100)">Flashcards 64</span>
+                <span style="padding:4px 7px;border-radius:5px;border-left:2px solid oklch(0.734 0.09 214);background:var(--color-surface);font-size:11px;color:var(--color-neutral-300)">Essay plan</span>
+              </div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">22<span style="padding:4px 7px;border-radius:5px;border-left:2px solid var(--color-neutral-700);background:var(--color-surface);font-size:11px;color:var(--color-neutral-400)">Past paper 3h</span></div>
+              <div style="border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-300);background:color-mix(in srgb, var(--color-bg) 94%, #000)">23<span style="padding:5px 7px;border-radius:5px;background:color-mix(in srgb, var(--color-accent) 20%, transparent);border-left:2px solid var(--color-accent);font-size:11px;color:var(--color-accent-100)">Chem Paper 2 · 09:00</span></div>
+              <div style="border-bottom:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-600);background:color-mix(in srgb, var(--color-bg) 94%, #000)">24</div>
+
+              <div style="border-right:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-400)">25</div>
+              <div style="border-right:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">26<span style="padding:4px 7px;border-radius:5px;border-left:2px solid var(--color-neutral-700);background:var(--color-surface);font-size:11px;color:var(--color-neutral-400)">Revision 2h</span></div>
+              <div style="border-right:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-400)">27</div>
+              <div style="border-right:1px solid var(--color-divider);padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--color-neutral-400)">28<span style="padding:4px 7px;border-radius:5px;border-left:2px solid oklch(0.734 0.09 214);background:var(--color-surface);font-size:11px;color:var(--color-neutral-300)">Essay 2 in · 17:00</span></div>
+              <div style="border-right:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-400)">29</div>
+              <div style="border-right:1px solid var(--color-divider);padding:9px 10px;font-size:12px;color:var(--color-neutral-600);background:color-mix(in srgb, var(--color-bg) 94%, #000)">30</div>
+              <div style="padding:9px 10px;font-size:12px;color:var(--color-neutral-600);background:color-mix(in srgb, var(--color-bg) 94%, #000)">31</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="width:314px;border-left:1px solid var(--color-divider);background:color-mix(in srgb, var(--color-bg) 94%, #000);padding:20px 18px;display:flex;flex-direction:column;gap:20px">
+          <div style="font:400 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--color-neutral-600)">THURSDAY 21 MAY</div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:8px;background:color-mix(in srgb, var(--color-accent) 12%, transparent);border-left:2px solid var(--color-accent)"><span style="font:400 11.5px/1 ui-monospace,monospace;color:var(--color-accent-300)">18:00</span><span style="font-size:12.5px">Equilibria — 45m</span><i class="ph ph-play" style="margin-left:auto;color:var(--color-accent)"></i></div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:8px;background:var(--color-surface)"><span style="font:400 11.5px/1 ui-monospace,monospace;color:var(--color-neutral-600)">19:00</span><span style="font-size:12.5px">Flashcards — 64 due</span></div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:8px;background:var(--color-surface)"><span style="font:400 11.5px/1 ui-monospace,monospace;color:var(--color-neutral-600)">20:15</span><span style="font-size:12.5px">History essay plan</span></div>
+          </div>
+          <div style="height:1px;background:var(--color-divider)"></div>
+          <div style="font:400 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--color-neutral-600)">NEXT UP</div>
+          <div style="display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--color-divider);font-size:12.5px"><span style="width:3px;height:28px;border-radius:2px;background:oklch(0.734 0.09 289)"></span><div>Chem Paper 2<div style="color:var(--color-neutral-600);font-size:11px;margin-top:3px">Fri 23 May · 09:00 · Hall B</div></div><span style="margin-left:auto;color:var(--color-accent-300);font:400 10.5px/1 ui-monospace,monospace">2d</span></div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--color-divider);font-size:12.5px"><span style="width:3px;height:28px;border-radius:2px;background:oklch(0.734 0.09 214)"></span><div>Essay 2 hand-in<div style="color:var(--color-neutral-600);font-size:11px;margin-top:3px">Wed 28 May · 17:00</div></div><span style="margin-left:auto;color:var(--color-neutral-600);font:400 10.5px/1 ui-monospace,monospace">7d</span></div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--color-divider);font-size:12.5px"><span style="width:3px;height:28px;border-radius:2px;background:oklch(0.734 0.09 154)"></span><div>Maths mock<div style="color:var(--color-neutral-600);font-size:11px;margin-top:3px">Thu 04 Jun · 13:30</div></div><span style="margin-left:auto;color:var(--color-neutral-600);font:400 10.5px/1 ui-monospace,monospace">14d</span></div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);font-size:12.5px"><span style="width:3px;height:28px;border-radius:2px;background:oklch(0.734 0.09 94)"></span><div>Biology Paper 3<div style="color:var(--color-neutral-600);font-size:11px;margin-top:3px">Thu 18 Jun · 09:00</div></div><span style="margin-left:auto;color:var(--color-neutral-600);font:400 10.5px/1 ui-monospace,monospace">28d</span></div>
+          </div>
+          <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 13px;border:1px solid var(--color-accent-700);border-radius:var(--radius-md);background:color-mix(in srgb, var(--color-accent-900) 50%, var(--color-surface))"><i class="ph ph-clock-countdown" style="color:var(--color-accent);font-size:16px"></i><div style="font-size:12.5px;line-height:1.45">Timetable has 3 free evenings<div style="color:var(--color-neutral-500);margin-top:3px">Fill them around Paper 2</div></div></div>
+            <div style="display:flex;align-items:center;gap:9px;color:var(--color-neutral-600);font-size:11.5px"><i class="ph ph-arrows-clockwise" style="font-size:14px"></i>Synced with school timetable</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div 

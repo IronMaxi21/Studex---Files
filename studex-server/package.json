@@ -1,0 +1,41 @@
+{
+  "name": "studex-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "node --import tsx --env-file-if-exists=.env --watch src/server.ts",
+    "start": "node --env-file-if-exists=.env dist/server.js",
+    "migrate": "node --import tsx --env-file-if-exists=.env src/lib/migrate.ts",
+    "seed": "node --import tsx --env-file-if-exists=.env src/seed.ts",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:e2e": "node ./node_modules/@playwright/test/cli.js test",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "licence": "node --import tsx --env-file-if-exists=.env src/licence.ts",
+    "publish:release": "node --import tsx --env-file-if-exists=.env src/publish.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^10.0.2",
+    "@fastify/helmet": "^13.0.1",
+    "@fastify/multipart": "^9.0.3",
+    "@fastify/rate-limit": "^10.2.2",
+    "@google/genai": "^2.22.0",
+    "@node-rs/argon2": "^2.0.2",
+    "@supabase/supabase-js": "^2.112.4",
+    "better-sqlite3": "^11.8.1",
+    "fastify": "^5.2.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,91 @@
+data-screen-label="05 Canvas" style="display:flex;flex-direction:column;gap:12px">
+    <sc-if value="{{ showFrameLabels }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:baseline;gap:12px"><span style="font:400 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--color-accent)">05</span><span style="font:500 15px/1 var(--font-heading)">Infinite canvas</span><span style="font:400 12.5px/1 var(--font-body);color:var(--color-neutral-600)">Floating dock · minimap of the whole canvas bottom-right, zoom inside it</span></div></sc-if>
+    <div style="width:1440px;border:1px solid var(--color-neutral-800);border-radius:var(--radius-lg);overflow:hidden;background:var(--color-bg);box-shadow:var(--shadow-lg)">
+      <div style="position:relative;height:820px;background:var(--color-bg);background-image:radial-gradient(color-mix(in srgb, var(--color-text) 10%, transparent) 1px,transparent 1px);background-size:26px 26px;font-size:13px">
+
+        <div style="position:absolute;top:16px;left:20px;display:flex;align-items:center;gap:12px;color:var(--color-neutral-500)"><i class="ph ph-caret-left" style="font-size:16px"></i><span style="color:var(--color-text);font-weight:500;font-size:14px">Equilibria map</span><span style="padding:3px 9px;border-radius:20px;background:color-mix(in srgb, var(--color-accent) 16%, transparent);color:var(--color-accent-300);font-size:11.5px">Canvas</span><span style="color:var(--color-neutral-600);font-size:12px">Chemistry · saved 2m ago</span></div>
+        <div style="position:absolute;top:14px;right:20px;display:flex;align-items:center;gap:10px"><span style="display:flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--color-accent);border-radius:7px;color:var(--color-accent-300);font-size:12px"><i class="ph ph-cards"></i>Study this map</span><span style="padding:7px 12px;border:1px solid var(--color-neutral-800);border-radius:7px;color:var(--color-neutral-400);font-size:12px">Share</span><span style="width:26px;height:26px;border-radius:50%;background:var(--color-accent-800);border:1px solid var(--color-accent-700)"></span></div>
+
+        <svg width="1440" height="820" style="position:absolute;inset:0;pointer-events:none" aria-hidden="true">
+          <path d="M430 168 L268 268" stroke="var(--color-accent-700)" stroke-width="1.4" fill="none"></path>
+          <path d="M600 168 L760 262" stroke="var(--color-accent-700)" stroke-width="1.4" fill="none"></path>
+          <path d="M516 182 L520 330" stroke="var(--color-neutral-800)" stroke-width="1.4" fill="none"></path>
+          <path d="M800 300 L860 430" stroke="var(--color-neutral-800)" stroke-width="1.4" fill="none"></path>
+          <path d="M300 310 L330 452" stroke="var(--color-neutral-800)" stroke-width="1.4" fill="none"></path>
+          <path d="M180 560 C240 520, 300 600, 360 552 S470 500, 520 548" stroke="var(--color-accent-600)" stroke-width="2" fill="none" opacity="0.85"></path>
+          <path d="M190 596 C250 570, 296 626, 352 588" stroke="var(--color-accent-600)" stroke-width="1.6" fill="none" opacity="0.6"></path>
+        </svg>
+
+        <div style="position:absolute;left:430px;top:128px;padding:14px 18px;border:1px solid var(--color-accent);border-radius:var(--radius-md);background:color-mix(in srgb, var(--color-surface) 92%, transparent);box-shadow:0 0 34px color-mix(in srgb, var(--color-accent) 22%, transparent);font:500 16px/1 var(--font-heading)">Dynamic equilibrium</div>
+        <div style="position:absolute;left:196px;top:266px;padding:11px 15px;border:1px solid var(--color-neutral-800);border-radius:var(--radius-md);background:var(--color-surface)">Le Chatelier</div>
+        <div style="position:absolute;left:756px;top:258px;padding:11px 15px;border:1px solid var(--color-neutral-800);border-radius:var(--radius-md);background:var(--color-surface)">K<sub>c</sub> &amp; K<sub>p</sub></div>
+        <div style="position:absolute;left:432px;top:330px;width:230px;padding:13px 14px;border:1px solid var(--color-accent-700);border-radius:var(--radius-md);background:color-mix(in srgb, var(--color-accent-900) 72%, transparent)"><div style="font:600 10px/1 ui-monospace,monospace;letter-spacing:.1em;color:var(--color-accent)">FLASHCARD</div><div style="margin-top:9px;line-height:1.5">Increase pressure → shifts to the side with fewer gas moles</div></div>
+        <div style="position:absolute;left:822px;top:424px;width:250px;padding:13px 14px;border:1px solid var(--color-neutral-800);border-radius:var(--radius-md);background:var(--color-surface)"><div style="font:600 10px/1 ui-monospace,monospace;letter-spacing:.1em;color:var(--color-neutral-600)">FROM PAPER 2 2024</div><div style="margin-top:9px;line-height:1.5;color:var(--color-neutral-300)">Q4(b) asked for the effect of a catalyst on K<sub>c</sub> — none.</div></div>
+        <div style="position:absolute;left:240px;top:436px;width:214px;height:120px;border:1px solid var(--color-neutral-800);border-radius:var(--radius-md);background:repeating-linear-gradient(135deg,var(--color-surface) 0 7px,color-mix(in srgb, var(--color-bg) 60%, var(--color-surface)) 7px 14px);display:flex;align-items:flex-end;padding:11px"><span style="font:400 10.5px/1 ui-monospace,monospace;color:var(--color-neutral-500)">rate–time graph</span></div>
+        <div style="position:absolute;left:176px;top:640px;font:400 10.5px/1 ui-monospace,monospace;letter-spacing:.1em;color:var(--color-neutral-600)">HANDWRITTEN — 21 MAY</div>
+
+        <div style="position:absolute;right:24px;top:100px;width:186px;padding:14px;border:1px solid var(--color-neutral-700);border-radius:11px;background:var(--color-surface);box-shadow:var(--shadow-md)">
+          <div style="font:400 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--color-neutral-600)">NODE</div>
+          <div style="margin-top:12px;display:flex;gap:7px">
+            <span style="width:20px;height:20px;border-radius:var(--radius-sm);background:oklch(0.734 0.09 289);box-shadow:0 0 0 2px var(--color-surface),0 0 0 3px var(--color-accent-300)"></span>
+            <span style="width:20px;height:20px;border-radius:var(--radius-sm);background:oklch(0.734 0.09 214)"></span>
+            <span style="width:20px;height:20px;border-radius:var(--radius-sm);background:oklch(0.734 0.09 154)"></span>
+            <span style="width:20px;height:20px;border-radius:var(--radius-sm);background:oklch(0.734 0.09 34)"></span>
+            <span style="width:20px;height:20px;border-radius:var(--radius-sm);border:1px solid var(--color-neutral-800)"></span>
+          </div>
+          <div style="margin-top:14px;display:flex;justify-content:space-between;color:var(--color-neutral-500);font-size:12px"><span>Stroke</span><span style="color:var(--color-text)">1.5</span></div>
+          <div style="margin-top:9px;display:flex;justify-content:space-between;color:var(--color-neutral-500);font-size:12px"><span>Shape</span><span style="color:var(--color-text)">Rounded</span></div>
+          <div style="margin-top:9px;display:flex;justify-content:space-between;color:var(--color-neutral-500);font-size:12px"><span>Text</span><span style="color:var(--color-text)">16 / 500</span></div>
+          <div style="margin-top:14px;padding:8px;border:1px solid var(--color-accent);border-radius:7px;text-align:center;color:var(--color-accent-300);font-size:12px;background:color-mix(in srgb, var(--color-accent) 8%, transparent)">Make flashcard</div>
+          <div style="margin-top:8px;padding:8px;border:1px solid var(--color-neutral-800);border-radius:7px;text-align:center;color:var(--color-neutral-400);font-size:12px">Send to document</div>
+        </div>
+
+        <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;align-items:center;gap:3px;padding:8px;background:var(--color-surface);border:1px solid var(--color-neutral-700);border-radius:14px;box-shadow:var(--shadow-lg);font-size:19px;color:var(--color-neutral-400)">
+          <i class="ph ph-cursor" style="padding:9px 10px;border-radius:var(--radius-md);background:color-mix(in srgb, var(--color-accent) 18%, transparent);color:var(--color-accent-300)"></i>
+          <i class="ph ph-hand" style="padding:9px 10px"></i>
+          <i class="ph ph-pencil-simple" style="padding:9px 10px"></i>
+          <i class="ph ph-highlighter" style="padding:9px 10px"></i>
+          <i class="ph ph-eraser" style="padding:9px 10px"></i>
+          <div style="width:1px;height:22px;background:var(--color-neutral-800);margin:0 6px"></div>
+          <i class="ph ph-shapes" style="padding:9px 10px"></i>
+          <i class="ph ph-graph" style="padding:9px 10px"></i>
+          <i class="ph ph-note" style="padding:9px 10px"></i>
+          <i class="ph ph-text-t" style="padding:9px 10px"></i>
+          <i class="ph ph-image" style="padding:9px 10px"></i>
+          <i class="ph ph-file-pdf" style="padding:9px 10px"></i>
+          <i class="ph ph-cards" style="padding:9px 10px"></i>
+        </div>
+
+        <div style="position:absolute;right:24px;bottom:24px;width:236px;background:var(--color-surface);border:1px solid var(--color-neutral-700);border-radius:11px;box-shadow:var(--shadow-lg);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-bottom:1px solid var(--color-divider)">
+            <span style="font:400 10px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--color-neutral-600)">WHOLE CANVAS</span>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:9px;color:var(--color-neutral-400);font:400 11px/1 ui-monospace,monospace"><i class="ph ph-minus"></i>68%<i class="ph ph-plus"></i></div>
+          </div>
+          <div style="position:relative;height:172px;background:color-mix(in srgb, var(--color-bg) 70%, #000)">
+            <svg viewBox="0 0 236 172" width="236" height="172" style="display:block" aria-hidden="true">
+              <path d="M74 42 L48 62" stroke="var(--color-accent-700)" stroke-width="1" fill="none"></path>
+              <path d="M104 42 L132 60" stroke="var(--color-accent-700)" stroke-width="1" fill="none"></path>
+              <path d="M88 46 L90 76" stroke="var(--color-neutral-700)" stroke-width="1" fill="none"></path>
+              <path d="M140 66 L152 92" stroke="var(--color-neutral-700)" stroke-width="1" fill="none"></path>
+              <rect x="72" y="32" width="46" height="11" rx="3" fill="color-mix(in srgb, var(--color-accent) 42%, transparent)" stroke="var(--color-accent)" stroke-width="0.8"></rect>
+              <rect x="34" y="58" width="30" height="9" rx="3" fill="var(--color-neutral-800)" stroke="var(--color-neutral-700)" stroke-width="0.8"></rect>
+              <rect x="128" y="56" width="26" height="9" rx="3" fill="var(--color-neutral-800)" stroke="var(--color-neutral-700)" stroke-width="0.8"></rect>
+              <rect x="74" y="72" width="40" height="16" rx="3" fill="color-mix(in srgb, var(--color-accent) 24%, transparent)" stroke="var(--color-accent-700)" stroke-width="0.8"></rect>
+              <rect x="140" y="88" width="44" height="14" rx="3" fill="var(--color-neutral-800)" stroke="var(--color-neutral-700)" stroke-width="0.8"></rect>
+              <rect x="44" y="90" width="38" height="20" rx="3" fill="var(--color-neutral-800)" stroke="var(--color-neutral-700)" stroke-width="0.8"></rect>
+              <path d="M32 122 C42 116, 52 130, 62 120 S78 110, 88 122" stroke="var(--color-accent-600)" stroke-width="1.1" fill="none"></path>
+              <path d="M34 130 C44 125, 52 136, 62 128" stroke="var(--color-accent-600)" stroke-width="0.9" fill="none" opacity="0.7"></path>
+              <path d="M100 126 C108 118, 116 132, 126 124 S138 116, 146 126" stroke="var(--color-neutral-600)" stroke-width="0.9" fill="none"></path>
+              <path d="M156 130 C164 124, 172 134, 182 126" stroke="var(--color-neutral-600)" stroke-width="0.9" fill="none"></path>
+              <rect x="168" y="30" width="36" height="18" rx="3" fill="var(--color-neutral-800)" stroke="var(--color-neutral-700)" stroke-width="0.8"></rect>
+              <rect x="26" y="24" width="26" height="10" rx="3" fill="var(--color-neutral-800)" stroke="var(--color-neutral-700)" stroke-width="0.8"></rect>
+              <rect x="18" y="18" width="150" height="92" rx="4" fill="color-mix(in srgb, var(--color-accent) 8%, transparent)" stroke="var(--color-accent)" stroke-width="1.2"></rect>
+            </svg>
+            <div style="position:absolute;left:11px;bottom:9px;font:400 9.5px/1 ui-monospace,monospace;color:var(--color-neutral-600)">42 objects · 3 pages of ink</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div 

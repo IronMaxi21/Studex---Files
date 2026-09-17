@@ -1,0 +1,133 @@
+data-screen-label="10 Settings" style="display:flex;flex-direction:column;gap:12px">
+    <sc-if value="{{ showFrameLabels }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:baseline;gap:12px"><span style="font:400 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--color-accent)">10</span><span style="font:500 15px/1 var(--font-heading)">Settings → Appearance</span><span style="font:400 12.5px/1 var(--font-body);color:var(--color-neutral-600)">Theme, accent, shell layout and canvas chrome all live here</span></div></sc-if>
+    <div style="width:1440px;border:1px solid var(--color-neutral-800);border-radius:var(--radius-lg);overflow:hidden;background:var(--color-bg);box-shadow:var(--shadow-lg)">
+      <div style="display:flex;height:840px;font-size:13px">
+        <div style="width:214px;border-right:1px solid var(--color-divider);background:color-mix(in srgb, var(--color-bg) 90%, #000);padding:18px 12px;display:flex;flex-direction:column;gap:3px;color:var(--color-neutral-400)">
+          <div style="font:400 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--color-neutral-600);padding:0 10px 12px">SETTINGS</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px"><i class="ph ph-user" style="font-size:15px"></i>Account</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;background:color-mix(in srgb, var(--color-accent) 14%, transparent);color:var(--color-text)"><i class="ph ph-paint-brush" style="color:var(--color-accent);font-size:15px"></i>Appearance</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px"><i class="ph ph-graduation-cap" style="font-size:15px"></i>Study</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px"><i class="ph ph-bell" style="font-size:15px"></i>Notifications</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px"><i class="ph ph-calendar-blank" style="font-size:15px"></i>Calendar sync</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px"><i class="ph ph-keyboard" style="font-size:15px"></i>Shortcuts</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px"><i class="ph ph-credit-card" style="font-size:15px"></i>Plan</div>
+          <div style="margin-top:auto;padding:12px;border:1px solid var(--color-accent-700);border-radius:var(--radius-md);background:color-mix(in srgb, var(--color-accent-900) 50%, var(--color-surface))"><div style="font:500 13px/1 var(--font-heading);color:var(--color-text)">Studex Pro</div><div style="margin-top:7px;color:var(--color-neutral-500);font-size:11.5px">Renews 12 Sep · £4.50/mo</div></div>
+        </div>
+        <div style="flex:1;padding:28px 34px;display:flex;flex-direction:column;gap:26px;min-width:0;overflow:hidden">
+          <div>
+            <h2 style="margin:0;font:500 28px/1.15 var(--font-heading);letter-spacing:-.03em">Appearance</h2>
+            <div style="margin-top:9px;color:var(--color-neutral-500);max-width:52em;line-height:1.7">Layout choices are per-device. Theme and accent follow your account everywhere.</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="font:400 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--color-neutral-600)">SHELL LAYOUT</div>
+            <div style="display:grid;grid-template-columns:repeat(3,220px);gap:16px">
+              <div style="border:1px solid var(--color-accent);border-radius:var(--radius-md);background:color-mix(in srgb, var(--color-accent) 6%, transparent);padding:12px;box-shadow:0 0 26px color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <div style="height:104px;border:1px solid var(--color-neutral-800);border-radius:6px;display:flex;overflow:hidden;background:var(--color-bg)">
+                  <div style="width:52px;background:color-mix(in srgb, var(--color-bg) 82%, #000);border-right:1px solid var(--color-divider);padding:8px 6px;display:flex;flex-direction:column;gap:5px"><span style="height:5px;border-radius:2px;background:var(--color-accent-700)"></span><span style="height:5px;border-radius:2px;background:var(--color-neutral-800)"></span><span style="height:5px;border-radius:2px;background:var(--color-neutral-800)"></span><span style="height:5px;width:70%;border-radius:2px;background:var(--color-neutral-800)"></span><span style="height:5px;width:80%;border-radius:2px;background:var(--color-neutral-800)"></span></div>
+                  <div style="flex:1;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:5px;align-content:start"><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span></div>
+                </div>
+                <div style="margin-top:11px;display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;border:1px solid var(--color-accent);display:flex;align-items:center;justify-content:center"><span style="width:7px;height:7px;border-radius:50%;background:var(--color-accent)"></span></span><span style="font:500 12.5px/1 var(--font-heading)">Folder tree</span></div>
+                <div style="margin-top:7px;color:var(--color-neutral-500);font-size:11.5px;line-height:1.5">One sidebar, everything nested. Current.</div>
+              </div>
+              <div style="border:1px solid var(--color-neutral-800);border-radius:var(--radius-md);padding:12px">
+                <div style="height:104px;border:1px solid var(--color-neutral-800);border-radius:6px;display:flex;overflow:hidden;background:var(--color-bg)">
+                  <div style="width:18px;background:color-mix(in srgb, var(--color-bg) 82%, #000);border-right:1px solid var(--color-divider);padding:7px 4px;display:flex;flex-direction:column;gap:5px;align-items:center"><span style="width:9px;height:9px;border-radius:3px;background:var(--color-accent-700)"></span><span style="width:9px;height:9px;border-radius:3px;background:var(--color-neutral-800)"></span><span style="width:9px;height:9px;border-radius:3px;background:var(--color-neutral-800)"></span></div>
+                  <div style="width:44px;background:color-mix(in srgb, var(--color-bg) 90%, #000);border-right:1px solid var(--color-divider);padding:8px 6px;display:flex;flex-direction:column;gap:5px"><span style="height:5px;border-radius:2px;background:var(--color-neutral-800)"></span><span style="height:5px;border-radius:2px;background:var(--color-neutral-800)"></span><span style="height:5px;width:75%;border-radius:2px;background:var(--color-neutral-800)"></span></div>
+                  <div style="flex:1;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:5px;align-content:start"><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span></div>
+                </div>
+                <div style="margin-top:11px;display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;border:1px solid var(--color-neutral-700)"></span><span style="font:500 12.5px/1 var(--font-heading);color:var(--color-neutral-300)">Icon rail</span></div>
+                <div style="margin-top:7px;color:var(--color-neutral-500);font-size:11.5px;line-height:1.5">Rail for sections, panel for the folder you're in.</div>
+              </div>
+              <div style="border:1px solid var(--color-neutral-800);border-radius:var(--radius-md);padding:12px">
+                <div style="height:104px;border:1px solid var(--color-neutral-800);border-radius:6px;display:flex;flex-direction:column;overflow:hidden;background:var(--color-bg)">
+                  <div style="height:16px;background:color-mix(in srgb, var(--color-bg) 82%, #000);border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:4px;padding:0 6px"><span style="width:26px;height:6px;border-radius:2px;background:var(--color-accent-700)"></span><span style="width:26px;height:6px;border-radius:2px;background:var(--color-neutral-800)"></span><span style="width:26px;height:6px;border-radius:2px;background:var(--color-neutral-800)"></span></div>
+                  <div style="flex:1;padding:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;align-content:start"><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span><span style="height:26px;border-radius:3px;background:var(--color-surface)"></span></div>
+                  <div style="height:14px;margin:0 auto 7px;width:74px;border-radius:7px;background:var(--color-surface);border:1px solid var(--color-neutral-800)"></div>
+                </div>
+                <div style="margin-top:11px;display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;border:1px solid var(--color-neutral-700)"></span><span style="font:500 12.5px/1 var(--font-heading);color:var(--color-neutral-300)">Workspace tabs</span></div>
+                <div style="margin-top:7px;color:var(--color-neutral-500);font-size:11.5px;line-height:1.5">No sidebar; open files as tabs with a floating dock.</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:1px;background:linear-gradient(90deg,transparent,var(--color-divider) 48px,var(--color-divider) calc(100% - 48px),transparent)"></div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:44px">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div style="font:400 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--color-neutral-600)">CANVAS CHROME</div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
+                <div style="border:1px solid var(--color-accent);border-radius:var(--radius-md);background:color-mix(in srgb, var(--color-accent) 6%, transparent);padding:12px">
+                  <div style="height:92px;border:1px solid var(--color-neutral-800);border-radius:6px;position:relative;background:var(--color-bg);background-image:radial-gradient(color-mix(in srgb, var(--color-text) 10%, transparent) 1px,transparent 1px);background-size:9px 9px">
+                    <span style="position:absolute;left:50%;transform:translateX(-50%);bottom:7px;width:88px;height:13px;border-radius:7px;background:var(--color-surface);border:1px solid var(--color-neutral-700)"></span>
+                    <span style="position:absolute;right:7px;bottom:24px;width:34px;height:30px;border-radius:4px;background:var(--color-surface);border:1px solid var(--color-accent-700)"></span>
+                  </div>
+                  <div style="margin-top:11px;display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;border:1px solid var(--color-accent);display:flex;align-items:center;justify-content:center"><span style="width:7px;height:7px;border-radius:50%;background:var(--color-accent)"></span></span><span style="font:500 12.5px/1 var(--font-heading)">Floating dock</span></div>
+                  <div style="margin-top:7px;color:var(--color-neutral-500);font-size:11.5px;line-height:1.5">Tools centred, minimap bottom-right.</div>
+                </div>
+                <div style="border:1px solid var(--color-neutral-800);border-radius:var(--radius-md);padding:12px">
+                  <div style="height:92px;border:1px solid var(--color-neutral-800);border-radius:6px;display:flex;overflow:hidden;background:var(--color-bg)">
+                    <div style="width:15px;background:color-mix(in srgb, var(--color-bg) 88%, #000);border-right:1px solid var(--color-divider);padding:5px 3px;display:flex;flex-direction:column;gap:4px;align-items:center"><span style="width:8px;height:8px;border-radius:2px;background:var(--color-accent-700)"></span><span style="width:8px;height:8px;border-radius:2px;background:var(--color-neutral-800)"></span><span style="width:8px;height:8px;border-radius:2px;background:var(--color-neutral-800)"></span><span style="width:8px;height:8px;border-radius:2px;background:var(--color-neutral-800)"></span></div>
+                    <div style="flex:1;background-image:radial-gradient(color-mix(in srgb, var(--color-text) 10%, transparent) 1px,transparent 1px);background-size:9px 9px"></div>
+                  </div>
+                  <div style="margin-top:11px;display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;border:1px solid var(--color-neutral-700)"></span><span style="font:500 12.5px/1 var(--font-heading);color:var(--color-neutral-300)">Tool column</span></div>
+                  <div style="margin-top:7px;color:var(--color-neutral-500);font-size:11.5px;line-height:1.5">Fixed left column plus a properties strip.</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <div style="font:400 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--color-neutral-600)">THEME &amp; DETAIL</div>
+              <div style="display:flex;align-items:center;gap:16px"><span style="color:var(--color-neutral-400);width:132px">Theme</span>
+                <div style="display:flex;gap:2px;padding:2px;border:1px solid var(--color-neutral-800);border-radius:7px">
+                  <span style="padding:6px 13px;border-radius:5px;background:color-mix(in srgb, var(--color-accent) 16%, transparent);color:var(--color-accent-300);font-size:12px">Dark</span>
+                  <span style="padding:6px 13px;font-size:12px;color:var(--color-neutral-500)">Light</span>
+                  <span style="padding:6px 13px;font-size:12px;color:var(--color-neutral-500)">System</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:16px"><span style="color:var(--color-neutral-400);width:132px">Accent</span>
+                <div style="display:flex;gap:9px">
+                  <span style="width:22px;height:22px;border-radius:50%;background:oklch(0.734 0.09 289);box-shadow:0 0 0 2px var(--color-bg),0 0 0 3px var(--color-accent-300)"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:oklch(0.734 0.09 214)"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:oklch(0.734 0.09 154)"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:oklch(0.734 0.09 94)"></span>
+                  <span style="width:22px;height:22px;border-radius:50%;background:oklch(0.734 0.09 34)"></span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:16px"><span style="color:var(--color-neutral-400);width:132px">Canvas grid</span>
+                <div style="display:flex;gap:2px;padding:2px;border:1px solid var(--color-neutral-800);border-radius:7px">
+                  <span style="padding:6px 13px;border-radius:5px;background:color-mix(in srgb, var(--color-accent) 16%, transparent);color:var(--color-accent-300);font-size:12px">Dots</span>
+                  <span style="padding:6px 13px;font-size:12px;color:var(--color-neutral-500)">Lines</span>
+                  <span style="padding:6px 13px;font-size:12px;color:var(--color-neutral-500)">Plain</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:16px"><span style="color:var(--color-neutral-400);width:132px">Density</span>
+                <div style="display:flex;gap:2px;padding:2px;border:1px solid var(--color-neutral-800);border-radius:7px">
+                  <span style="padding:6px 13px;border-radius:5px;background:color-mix(in srgb, var(--color-accent) 16%, transparent);color:var(--color-accent-300);font-size:12px">Compact</span>
+                  <span style="padding:6px 13px;font-size:12px;color:var(--color-neutral-500)">Comfortable</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:16px"><span style="color:var(--color-neutral-400);width:132px">Show minimap</span><span style="width:38px;height:21px;border-radius:20px;border:1px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 20%, transparent);display:flex;align-items:center;justify-content:flex-end;padding:0 3px"><span style="width:14px;height:14px;border-radius:50%;background:var(--color-accent-300)"></span></span></div>
+              <div style="display:flex;align-items:center;gap:16px"><span style="color:var(--color-neutral-400);width:132px">Focus mode</span><span style="width:38px;height:21px;border-radius:20px;border:1px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 20%, transparent);display:flex;align-items:center;justify-content:flex-end;padding:0 3px"><span style="width:14px;height:14px;border-radius:50%;background:var(--color-accent-300)"></span></span></div>
+              <div style="display:flex;align-items:center;gap:16px"><span style="color:var(--color-neutral-400);width:132px">Reduce motion</span><span style="width:38px;height:21px;border-radius:20px;border:1px solid var(--color-neutral-700);display:flex;align-items:center;padding:0 3px"><span style="width:14px;height:14px;border-radius:50%;background:var(--color-neutral-600)"></span></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showFrameLabels&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Presentation&quot;},&quot;windowChrome&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Presentation&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showFrameLabels: this.props.showFrameLabels ?? true,
+      windowChrome: this.props.windowChrome ?? true
+    };
+  }
+}
+</script>
+</body>
+</html>

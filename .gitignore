@@ -1,0 +1,28 @@
+# Credentials. The service role key, the Supabase keys and the AI keys live
+# here, and a repository is the one place they must never be.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Installed, not written: restored with `npm ci` on any machine.
+node_modules/
+
+# Build output. Every release is rebuilt from source, and the zip and disk
+# image are attached to a GitHub release rather than committed — git stores a
+# whole new copy of a 90 MB file on every build.
+dist/
+build/out/
+*.app/
+*.zip
+*.dmg
+
+# Local databases and uploaded files.
+data/
+*.sqlite
+*.sqlite-*
+storage/
+
+# macOS
+.DS_Store

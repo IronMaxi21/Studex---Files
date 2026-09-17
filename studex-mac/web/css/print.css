@@ -1,0 +1,242 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Paper.
+
+   Until now the app could not be printed at all: WKWebView does not implement
+   `window.print()`, there was no Print item in the menu bar, and no stylesheet
+   said what a page should look like when it is not a window. ⌘P did nothing.
+
+   Three things have to happen for a screen to become a sheet of paper.
+
+   The chrome goes. A sidebar, a rail, a top bar, a floating dock and a minimap
+   are all ways of getting somewhere else; on paper there is nowhere else, and
+   every one of them would only eat margin.
+
+   The ramp is re-grounded on white. The app is dark by default and printers do
+   not print backgrounds, so the dark ramp arrives at the paper as pale text on
+   nothing. The palette below is not the light theme copied — it is an ink
+   ramp: one paper colour and a set of greys that stay legible at 300dpi, which
+   is a different question from what reads well on a backlit panel.
+
+   And the scroll comes out. Every pane in the app is a fixed-height box with
+   `overflow-y: auto`, which is exactly the shape that prints as one page and
+   then stops. They are unwound into ordinary flow so the content can run as
+   long as it is, and told not to break inside a paragraph, a table or a card.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Built for the printer and no use on screen. See web/js/print.js. */
+.print-sheet { display: none; }
+
+@media print {
+  /* ── the ink ramp ──────────────────────────────────────────────────────
+
+     All three selectors, because the theme is an attribute on <html> and
+     `:root[data-theme='light']` in tokens.css outranks a bare `:root` here no
+     matter which stylesheet comes last. Whatever the screen was showing, the
+     paper is the same paper. */
+  :root,
+  :root[data-theme='dark'],
+  :root[data-theme='light'] {
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-text: #101014;
+    --color-accent: #3f3676;
+    --color-accent-2: #4a4285;
+    --color-divider: #b4b4bd;
+
+    --color-neutral-100: #101014;
+    --color-neutral-200: #1d1d24;
+    --color-neutral-300: #2b2b34;
+    --color-neutral-400: #3a3a45;
+    --color-neutral-500: #4a4a56;
+    --color-neutral-600: #5c5c69;
+    --color-neutral-700: #9a9aa6;
+    --color-neutral-800: #c8c8d0;
+    --color-neutral-900: #e6e6ec;
+
+    --accent-fg-mix: #ffffff;
+    --accent-bg-mix: #000000;
+
+    --color-danger: #8c1d2b;
+    --color-danger-strong: #741724;
+
+    /* Density is a reading comfort on a screen you are sitting in front of.
+       On paper it is only more sheets, so the page is always the tight one. */
+    --density-step: 0px;
+    --line-body: 1.5;
+    --chrome-bg: #ffffff;
+    --rail-bg: #ffffff;
+    --accent-wash: transparent;
+    --accent-wash-soft: transparent;
+
+    /* Shadows are a lighting effect. On paper they are a grey smear, so the
+       hairline that carries the shape survives and the blur does not. */
+    --shadow-sm: 0 0 0 1px var(--color-neutral-800);
+    --shadow-md: 0 0 0 1px var(--color-neutral-800);
+    --shadow-lg: 0 0 0 1px var(--color-neutral-700);
+
+    /* Folder and subject hues are a lightness away from unreadable once they
+       are ink rather than light. */
+    --folder-l: 0.42;
+    --folder-c: 0.07;
+  }
+
+  @page { margin: 14mm; }
+
+  html, body {
+    background: #ffffff;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  /* ── the chrome ────────────────────────────────────────────────────────
+
+     Navigation, floating controls and anything that only answers a pointer.
+     `!important` throughout: several of these are laid out by inline styles or
+     by rules more specific than a bare class. */
+  .rail,
+  .sidebar,
+  .topbar,
+  .tabstrip,
+  .dock,
+  .tool-column,
+  .minimap,
+  .toasts,
+  .palette-wrap,
+  .backdrop,
+  .menu,
+  .offline-bar,
+  .block .handle,
+  .card-delete,
+  .resize-handle,
+  .scrim {
+    display: none !important;
+  }
+
+  /* ── the flow ──────────────────────────────────────────────────────────
+
+     Every one of these is a scrolling pane on screen. Unwound, they become
+     ordinary blocks and the content decides how many pages it is. */
+  .app,
+  .shell,
+  .main,
+  .content,
+  .doc-scroll,
+  .doc-page,
+  .canvas-wrap-host {
+    display: block !important;
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* `.content` was a flex column whose gap did the spacing between sections;
+     as a block it needs the spacing back. */
+  .content { padding: 0 !important; }
+  .content > * + * { margin-top: 18px; }
+
+  /* The document measure is 760px because that is a comfortable line on a
+     screen. On paper the page has already decided how wide the measure is. */
+  .doc-page {
+    width: auto !important;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  .doc-title { font-size: 26pt; }
+
+  /* Nothing is worth splitting across a fold except running prose. */
+  .block,
+  .deck-card,
+  .stat,
+  .card-face,
+  .row,
+  .list-row,
+  .file-row,
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .block.heading,
+  .doc-title,
+  .section-label {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Surfaces that were told apart by their fill are told apart by a line. */
+  .deck-card,
+  .stat,
+  .card,
+  .panel {
+    border: 1px solid var(--color-neutral-800);
+    background: none !important;
+    box-shadow: none !important;
+  }
+
+  /* A canvas is one picture. It is fitted to its content before the panel
+     opens (see views/canvas.js) and printed at the size it lands. */
+  .canvas-wrap-host { height: 170mm !important; page-break-inside: avoid; }
+  .canvas-wrap { background: none !important; }
+  .canvas-grid { background-image: none !important; }
+
+  /* ── the cram sheet ────────────────────────────────────────────────────
+
+     A deck prints as cards rather than as the screen that lists them, so when
+     one has been built the interface underneath it stands down. */
+  :root[data-print-mode='sheet'] #root { display: none !important; }
+
+  .print-sheet {
+    display: block;
+    font-family: var(--font-body);
+    color: var(--color-text);
+  }
+  .print-sheet .sheet-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--color-neutral-700);
+  }
+  .print-sheet .sheet-head .name { font: 500 16pt/1.2 var(--font-heading); }
+  .print-sheet .sheet-head .count { font: 400 9pt/1 var(--font-mono); color: var(--color-neutral-600); }
+
+  /* Two-up: two cards to a row, each card folded down the middle with the
+     question on one half and its answer facing it on the other. Cut along the
+     rows and the fold is already drawn. */
+  .print-sheet .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6mm;
+  }
+  .print-sheet .cut {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 26mm;
+    border: 1px solid var(--color-neutral-700);
+    border-radius: 2mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .print-sheet .cut .half {
+    padding: 4mm 4.5mm;
+    font-size: 10pt;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  /* The fold. Dashed, because it is an instruction rather than an edge. */
+  .print-sheet .cut .answer {
+    border-left: 1px dashed var(--color-neutral-700);
+    color: var(--color-neutral-300);
+  }
+  .print-sheet .cut .side {
+    display: block;
+    font: 400 7pt/1 var(--font-mono);
+    letter-spacing: 0.12em;
+    color: var(--color-neutral-600);
+    margin-bottom: 2mm;
+  }
+}

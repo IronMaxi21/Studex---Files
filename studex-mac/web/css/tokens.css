@@ -1,0 +1,308 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Nocturne tokens, transcribed from the design system's styles.css.
+   Dark is the ground; light is a re-grounding of the same ramps. Accent is
+   overridable per account, so anything accent-derived is expressed through
+   --color-accent rather than hard-coded.
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --color-bg: #161826;
+  --color-surface: #232532;
+  --color-text: #e9e9ed;
+  --color-accent: #8a88b8;
+  --color-accent-2: #a2a1c4;
+  --color-accent-3: #739f8c;
+  --color-divider: color-mix(in srgb, var(--color-text) 16%, transparent);
+
+  --color-neutral-100: #f3f5fe;
+  --color-neutral-200: #e4e7f5;
+  --color-neutral-300: #cfd3e5;
+  --color-neutral-400: #b2b6ca;
+  --color-neutral-500: #9397ab;
+  --color-neutral-600: #75798c;
+  --color-neutral-700: #595d6c;
+  --color-neutral-800: #3f424d;
+  --color-neutral-900: #292b31;
+
+  /* The accent ramp is generated from --color-accent so that changing the
+     accent in Settings moves every step with it, exactly as the design's note
+     describes ("one hue family generated at the accent's own lightness").
+
+     Steps 100–400 are the *foreground* end — accent text sitting on a subtle
+     accent wash — and 600–900 are the *ground* end, used as fills. On a dark
+     theme the foreground end is tinted toward white and the ground end toward
+     black; on a light theme both reverse, or accent text would be near-white
+     on a near-white page. The two mix targets carry that reversal so every
+     step flips with the theme instead of each rule special-casing it. */
+  --accent-fg-mix: #ffffff;
+  --accent-bg-mix: #000000;
+
+  --color-accent-100: color-mix(in oklab, var(--color-accent) 12%, var(--accent-fg-mix));
+  --color-accent-200: color-mix(in oklab, var(--color-accent) 24%, var(--accent-fg-mix));
+  --color-accent-300: color-mix(in oklab, var(--color-accent) 52%, var(--accent-fg-mix));
+  --color-accent-400: color-mix(in oklab, var(--color-accent) 78%, var(--accent-fg-mix));
+  --color-accent-500: var(--color-accent);
+  --color-accent-600: color-mix(in oklab, var(--color-accent) 82%, var(--accent-bg-mix));
+  --color-accent-700: color-mix(in oklab, var(--color-accent) 62%, var(--accent-bg-mix));
+  --color-accent-800: color-mix(in oklab, var(--color-accent) 44%, var(--accent-bg-mix));
+  --color-accent-900: color-mix(in oklab, var(--color-accent) 28%, var(--accent-bg-mix));
+
+  --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+  /* Documents are set in Calibri, which ships with Office rather than with
+     macOS. Carlito is metric-compatible with it, so a machine that has either
+     lays a page out identically; anything else falls back to the UI face. */
+  --font-doc: Calibri, Carlito, 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  /* The reading typeface, chosen per device (settings › Workspace). It drives
+     the document column and the flashcard face; the defaults reproduce the
+     app as it was before the choice existed — documents in the doc face, cards
+     in the heading face — so 'system' changes nothing. The per-choice stacks
+     live in app.css under :root[data-doc-font=…]. --reading-leading is the
+     document body line height, set by :root[data-line-spacing=…]. */
+  --font-reading: var(--font-doc);
+  --font-cards: var(--font-heading);
+  --reading-leading: 1.45;
+
+  /* Tight corners: rounded enough to read as one family of surfaces, square
+     enough that a dense workspace does not look like a stack of pills. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 0 0 1px var(--color-neutral-800);
+  --shadow-md: 0 0 0 1px var(--color-neutral-700), 0 6px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-500), 0 16px 40px rgba(0, 0, 0, 0.65);
+
+  /* How things move. Three durations and two curves, so a menu, a dialog, a
+     screen and a row all arrive at the same speed and in the same manner —
+     which is most of what makes a set of screens read as one application.
+     --ease-spring overshoots very slightly, and is for things that appear
+     from nothing; --ease-out is for things that change while in place. */
+  --dur-fast: 110ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-spring: cubic-bezier(0.2, 0.9, 0.3, 1.14);
+
+  /* How much air a row is given.
+
+     Settings offers Compact and Comfortable, and store.js has always written
+     the choice onto the body — but nothing read it, so the setting moved a
+     segmented control and changed nothing on the screen. Rather than a second
+     set of paddings for every row in the app, there is one step: the value
+     added to the vertical padding of anything that is a row, half of it again
+     for the gaps between them, and a looser line for running text. Compact is
+     zero, so the app as it stands is unchanged, and comfortable is three
+     pixels a side — a fifteen-row list grows by about a row's worth, which is
+     the difference between the two settings being honest about itself.
+
+     It is set on the body rather than on :root because that is the element
+     store.js writes the attribute to; :root carries the compact value so that
+     anything rendered outside the body still resolves. */
+  --density-step: 0px;
+  --line-body: 1.55;
+
+  /* One red for everything that destroys something. It was written out by
+     hand at three slightly different values across the menu and the dialog. */
+  --color-danger: oklch(0.75 0.13 25);
+  --color-danger-strong: oklch(0.7 0.15 25);
+
+  /* Chrome derived from the ground, so both themes get it right. */
+  --chrome-bg: color-mix(in srgb, var(--color-bg) 84%, #000);
+  --rail-bg: color-mix(in srgb, var(--color-bg) 90%, #000);
+  --accent-wash: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  --accent-wash-soft: color-mix(in srgb, var(--color-accent) 10%, transparent);
+
+  /* Folder hue family: one lightness and chroma, hue rotated per role. */
+  --hue-accent: 289;
+  --hue-violet: 289;
+  --hue-sky: 240;
+  --hue-teal: 195;
+  --hue-lime: 140;
+  --hue-amber: 80;
+  --hue-rose: 20;
+  --folder-l: 0.734;
+  --folder-c: 0.06;
+}
+
+/* The other half of the density setting. */
+body[data-density='comfortable'] {
+  --density-step: 3px;
+  --line-body: 1.7;
+}
+
+/* Light re-grounds the ramp: neutrals invert, the accent keeps its hue but
+   darkens enough to hold contrast on a pale surface. */
+:root[data-theme='light'] {
+  --color-bg: #f7f8fc;
+  --color-surface: #ffffff;
+  --color-text: #1b1d27;
+  --color-accent: #4f4d86;
+
+  --color-neutral-100: #292b31;
+  --color-neutral-200: #3f424d;
+  --color-neutral-300: #595d6c;
+  --color-neutral-400: #5c6070;
+  --color-neutral-500: #6f7385;
+  --color-neutral-600: #8a8fa1;
+  --color-neutral-700: #c3c7d6;
+  --color-neutral-800: #dfe2ee;
+  --color-neutral-900: #eef0f7;
+
+  /* Accent text darkens and accent fills lighten — see the ramp note above. */
+  --accent-fg-mix: #16182a;
+  --accent-bg-mix: #ffffff;
+
+  --color-divider: color-mix(in srgb, var(--color-text) 14%, transparent);
+  /* On white the same red is too light to read, so it darkens with the theme. */
+  --color-danger: oklch(0.55 0.19 25);
+  --color-danger-strong: oklch(0.5 0.2 25);
+  --chrome-bg: color-mix(in srgb, var(--color-bg) 96%, #000);
+  --rail-bg: color-mix(in srgb, var(--color-bg) 98%, #000);
+
+  --shadow-sm: 0 0 0 1px var(--color-neutral-800);
+  --shadow-md: 0 0 0 1px var(--color-neutral-800), 0 6px 18px rgba(24, 26, 40, 0.10);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-700), 0 16px 40px rgba(24, 26, 40, 0.16);
+
+  --folder-l: 0.58;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   More contrast.
+
+   macOS's "Increase contrast" arrives here as `prefers-contrast: more`, and
+   until now nothing answered it. The ramp is doing the work in both themes —
+   dividers at 16% of the text colour, secondary text three or four steps down
+   the neutrals — and at that setting the reader is telling the machine that
+   those steps are too quiet to read. So the same tokens are re-grounded rather
+   than any rule rewritten: dividers become lines instead of suggestions,
+   secondary text moves toward the primary colour, the hairline rings in the
+   shadows step up a stop, and the accent washes deepen enough that a selected
+   row is visibly a different colour rather than a slightly different one.
+
+   Every token here has to be set twice. A token the light theme re-grounds is
+   set by `:root[data-theme='light']`, which outranks a bare `:root` on
+   specificity no matter which comes later — so a light-theme override inside
+   this block is the only thing that can beat it.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (prefers-contrast: more) {
+  :root {
+    --color-text: #ffffff;
+    --color-divider: color-mix(in srgb, var(--color-text) 44%, transparent);
+
+    /* Secondary text and icons. 300 and 400 barely move — they are already
+       close to the text colour — while 500, 600 and 700 climb the most,
+       because they are where the app puts things it still expects to be read
+       (`.dim`, metadata lines, placeholder text, the footer). */
+    --color-neutral-300: #e2e5f2;
+    --color-neutral-400: #d3d6e6;
+    --color-neutral-500: #c3c6d8;
+    --color-neutral-600: #b0b4c8;
+    --color-neutral-700: #949aae;
+
+    /* The rings are the border of every menu, dialog and popover. */
+    --shadow-sm: 0 0 0 1px var(--color-neutral-600);
+    --shadow-md: 0 0 0 1px var(--color-neutral-500), 0 6px 18px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 0 0 1px var(--color-neutral-400), 0 16px 40px rgba(0, 0, 0, 0.7);
+
+    --accent-wash: color-mix(in srgb, var(--color-accent) 30%, transparent);
+    --accent-wash-soft: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+
+  :root[data-theme='light'] {
+    --color-text: #000000;
+    --color-divider: color-mix(in srgb, var(--color-text) 40%, transparent);
+
+    --color-neutral-300: #1f222c;
+    --color-neutral-400: #2b2e3a;
+    --color-neutral-500: #383c49;
+    --color-neutral-600: #464a59;
+    --color-neutral-700: #9aa0b3;
+
+    --shadow-sm: 0 0 0 1px var(--color-neutral-700);
+    --shadow-md: 0 0 0 1px var(--color-neutral-600), 0 6px 18px rgba(24, 26, 40, 0.18);
+    --shadow-lg: 0 0 0 1px var(--color-neutral-500), 0 16px 40px rgba(24, 26, 40, 0.24);
+
+    --accent-wash: color-mix(in srgb, var(--color-accent) 24%, transparent);
+    --accent-wash-soft: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   High contrast, chosen in the app.
+
+   The block above answers the *machine's* "Increase contrast"; this answers a
+   student who turns it on in Settings › Accessibility regardless of the OS, so
+   it re-grounds the same tokens by the same reasoning, and goes one step
+   further than the OS setting does: text is driven to pure black or white, the
+   divider becomes a solid line, and translucent surfaces are made opaque so a
+   menu or dialog never sits as a faint tint over the page. Kept as its own
+   `data-contrast='high'` attribute (store.js) so it stacks on either theme and
+   on top of, or instead of, the OS preference. Set twice for the same
+   specificity reason the OS block is. */
+:root[data-contrast='high'] {
+  --color-text: #ffffff;
+  --color-divider: color-mix(in srgb, var(--color-text) 60%, transparent);
+
+  --color-neutral-300: #eef0fb;
+  --color-neutral-400: #dfe2f0;
+  --color-neutral-500: #d0d3e4;
+  --color-neutral-600: #bcc0d4;
+  --color-neutral-700: #a2a8bd;
+
+  --shadow-sm: 0 0 0 1px var(--color-neutral-500);
+  --shadow-md: 0 0 0 1px var(--color-neutral-400), 0 6px 18px rgba(0, 0, 0, 0.65);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-300), 0 16px 40px rgba(0, 0, 0, 0.75);
+
+  --accent-wash: color-mix(in srgb, var(--color-accent) 34%, transparent);
+  --accent-wash-soft: color-mix(in srgb, var(--color-accent) 26%, transparent);
+}
+:root[data-contrast='high'][data-theme='light'] {
+  --color-text: #000000;
+  --color-divider: color-mix(in srgb, var(--color-text) 56%, transparent);
+
+  --color-neutral-300: #14161e;
+  --color-neutral-400: #1f222c;
+  --color-neutral-500: #2b2e3a;
+  --color-neutral-600: #383c49;
+  --color-neutral-700: #8891a6;
+
+  --shadow-sm: 0 0 0 1px var(--color-neutral-600);
+  --shadow-md: 0 0 0 1px var(--color-neutral-500), 0 6px 18px rgba(24, 26, 40, 0.22);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-400), 0 16px 40px rgba(24, 26, 40, 0.3);
+
+  --accent-wash: color-mix(in srgb, var(--color-accent) 26%, transparent);
+  --accent-wash-soft: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+/* Opaque surfaces in high contrast: a translucent menu or dialog is exactly
+   what this reader cannot use, so glass is overridden here whatever the glass
+   setting is. */
+:root[data-contrast='high'] .menu,
+:root[data-contrast='high'] .palette,
+:root[data-contrast='high'] .dialog,
+:root[data-contrast='high'] .toast,
+:root[data-contrast='high'] .dock,
+:root[data-contrast='high'] .sel-pop,
+:root[data-contrast='high'] .select-bar,
+:root[data-contrast='high'] .sidebar,
+:root[data-contrast='high'] .rail,
+:root[data-contrast='high'] .tabstrip {
+  background: var(--color-surface);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+
+/* Colour roles resolve to the hue family. Anything the API stores as a hex
+   value is applied directly by the client instead. */
+.c-accent   { --role-color: oklch(var(--folder-l) var(--folder-c) var(--hue-accent)); }
+.c-accent-2 { --role-color: oklch(var(--folder-l) var(--folder-c) var(--hue-violet)); }
+.c-violet   { --role-color: oklch(var(--folder-l) var(--folder-c) var(--hue-violet)); }
+.c-sky      { --role-color: oklch(var(--folder-l) var(--folder-c) var(--hue-sky)); }
+.c-teal     { --role-color: oklch(var(--folder-l) var(--folder-c) var(--hue-teal)); }
+.c-lime     { --role-color: oklch(var(--folder-l) var(--folder-c) var(--hue-lime)); }
+.c-amber    { --role-color: oklch(var(--folder-l) var(--folder-c) var(--hue-amber)); }
+.c-rose     { --role-color: oklch(var(--folder-l) var(--folder-c) var(--hue-rose)); }
+.c-neutral  { --role-color: var(--color-neutral-400); }
