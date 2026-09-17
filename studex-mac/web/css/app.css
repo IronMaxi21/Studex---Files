@@ -697,6 +697,12 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
 .sel:disabled { opacity: 0.5; cursor: default; }
 .sel:disabled:hover { border-color: var(--color-divider); }
 
+/* A dropdown standing at the end of a settings row answers a label, so it is
+   sized by its own longest option. `.input` is written for a field filling a
+   column and hands it `width: 100%`, which in a flex row takes the whole width
+   and leaves the label beside it wrapping one word to a line underneath. */
+.rows > .row > .sel { width: auto; flex: 0 1 auto; }
+
 /* The popup is a menu with a tick column, so that the row a value is on lines
    up with every other row whether or not it is the chosen one. */
 .sel-pop button[role='option'] {
