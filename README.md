@@ -14,7 +14,7 @@ revision timetable — one native Mac app, working offline, on your own disk.
 [![Apple silicon](https://img.shields.io/badge/Apple%20silicon-arm64-444)](#requirements)
 [![Free to start](https://img.shields.io/badge/free-no%20card%20required-2e7d5b)](#free-vs-pro)
 
-### [⬇︎ Download Studex for Mac](https://github.com/IronMaxi21/Studex-releases/releases/download/v1.2.0/Studex-1.2.0.dmg)
+<a href="https://github.com/IronMaxi21/Studex-releases/releases/download/v1.2.0/Studex-1.2.0.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/e3179be1-8416-4b8a-b417-743e1ecc67d6" alt="Download for macOS" /></a>
 
 <img src="docs/img/app-home.jpg" alt="The Studex home screen: today's cards, the week's plan and every subject in one rail" width="860">
 
