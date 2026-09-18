@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/img/studex-mark.png" alt="Studex" width="96">
+<img src="Studex.icns" alt="Studex" width="96">
 
 # Studex
 
