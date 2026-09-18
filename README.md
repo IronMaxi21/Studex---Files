@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Studex.icns" alt="Studex" width="96">
+<img src="https://github.com/IronMaxi21/studex/blob/main/studex-mac/build/Studex.icns" alt="Studex" width="96">
 
 # Studex
 
