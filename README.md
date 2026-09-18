@@ -16,46 +16,42 @@ revision timetable — one native Mac app, working offline, on your own disk.
 
 <a href="https://github.com/IronMaxi21/Studex-releases/releases/download/v1.2.0/Studex-1.2.0.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/e3179be1-8416-4b8a-b417-743e1ecc67d6" alt="Download for macOS" /></a>
 
-<img src="docs/img/app-home.jpg" alt="The Studex home screen: today's cards, the week's plan and every subject in one rail" width="860">
+Once downloaded, open the `.dmg` and move **Boring Notch** to your `/Applications` folder.
 
-</div>
+> [!IMPORTANT]
+> We don't have an Apple Developer account (yet 👀), so macOS will warn you that Studex is from an unidentified developer on first launch. This is expected behavior.
+>
+> You'll need to bypass this before the app will open. You only need to do this once. Use one of the methods below.
 
 ---
 
-## Download
+#### Recommended: Terminal (Always Works)
 
-| | |
-|---|---|
-| **Latest** | v1.2.0 — [Studex-1.2.0.dmg](https://github.com/IronMaxi21/Studex-releases/releases/download/v1.2.0/Studex-1.2.0.dmg) (91 MB) |
-| **Requires** | macOS 13 Ventura or later, Apple silicon |
-| **Costs** | Nothing to start. No card, no trial clock. |
+This is the quickest and easiest method. It only requires a single command and works consistently for all users. System Settings can sometimes fail and won't work for non-admin users.
 
-Every build, with its notes, is on the [releases page](https://github.com/IronMaxi21/Studex-releases/releases).
+After moving Boring Notch to your Applications folder, run:
 
-### Installing
-
-1. Open `Studex-1.2.0.dmg` and drag **Studex** onto **Applications**.
-2. This build is **not yet notarised by Apple**, so the first launch needs
-   **Control-click → Open** rather than a double-click.
-3. If macOS still refuses, open **System Settings → Privacy & Security** and
-   click **Open Anyway**, then launch it again.
-
-That is a one-time step. After the first launch Studex opens normally, and
-later versions arrive through **Settings → Updates** — each one signed, so the
-app will refuse an update it cannot verify.
-
-### Checking the download arrived intact
-
-```sh
-shasum -a 256 Studex-1.2.0.dmg
+```bash
+xattr -dr com.apple.quarantine /Applications/boringNotch.app
 ```
 
-```
-82c764d7dee5645eae07809cadb40d09c60064fad133770d5eab519cef03c72c
-```
+Then open the app normally.
 
-If those don't match, the file is damaged or incomplete — download it again
-rather than opening it.
+---
+
+#### Alternative: System Settings
+
+> [!NOTE]
+> This method doesn't work for all users. If this doesn't work, use the Terminal method above.
+
+1. Try to open the app — you'll see a security warning.
+2. Click **OK** to dismiss it.
+3. Open **System Settings** > **Privacy & Security**.
+4. Scroll to the bottom and click **Open Anyway** next to the Boring Notch warning.
+5. Confirm if prompted.
+
+---
+
 
 ---
 
