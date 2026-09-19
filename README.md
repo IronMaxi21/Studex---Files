@@ -92,7 +92,7 @@ once you can see the shape of it.
 
 ### Cards that come back when you'd forget
 
-<img src="https://github.com/IronMaxi21/studex/blob/main/app-review.jpg" alt="A card in review with Again, Hard, Good and Easy" width="820">
+<img src="https://github.com/IronMaxi21/studex/blob/main/app-review.jpg" alt="A card in review with Again, Hard, Good and Easy" width="710">
 
 - Highlight a line in a note and it becomes a card, still attached to the note
   it came from.
@@ -108,7 +108,7 @@ once you can see the shape of it.
 
 ### Your specification, marked out of five
 
-<img src="https://github.com/IronMaxi21/studex/blob/main/app-topics.jpg" alt="The topic matrix, each topic rated one to five" width="820">
+<img src="https://github.com/IronMaxi21/studex/blob/main/app-topics.jpg" alt="The topic matrix, each topic rated one to five" width="710">
 
 - Drop in your exam board's specification — PDF, Word or plain text — and
   Studex reads the topic list out of it. **The file is parsed on your Mac.**
