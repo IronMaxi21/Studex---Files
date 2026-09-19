@@ -170,6 +170,11 @@ export async function deleteBlob(key: string): Promise<void> {
   }
 }
 
+/** The whole of a blob in memory. Used where the caller needs bytes, not a stream. */
+export async function readBlob(key: string): Promise<Buffer> {
+  return fsp.readFile(resolveStoragePath(key));
+}
+
 export function blobReadStream(key: string): Readable {
   return fs.createReadStream(resolveStoragePath(key));
 }

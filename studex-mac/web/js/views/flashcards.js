@@ -10,8 +10,9 @@ import { openMenu } from '../menu.js';
 import { relative, plural, FILE_ICON } from '../format.js';
 import { onPrint } from '../print.js';
 import { reportDue, refreshDue } from '../badge.js';
-import { celebrateStreak, rollNumber } from '../celebrate.js';
-import { aiAvailable, quizDialog, QUIZ_MODES } from '../ai.js';
+import { celebrateStreak, celebrateIfStreakGrew, studyDay, rollNumber, confetti } from '../celebrate.js';
+import { sfx } from '../sfx.js';
+import { aiAvailable, explainCard, quizDialog, QUIZ_MODES } from '../ai.js';
 import { studyPrefs, saveStudyPrefs, shuffled } from '../studyprefs.js';
 import { submitReview } from '../review-queue.js';
 import { speak, cancelSpeech, speechAvailable } from '../speak.js';
@@ -718,13 +719,13 @@ async function editCard(card, template, refresh) {
  * Where a study session sits: inside the deck, which is inside its folder. The
  * way out of a sitting is the deck it came from, not the list of every deck.
  */
-function studyCrumbs(deck) {
-  if (!deck) return [{ label: 'Flashcards', to: 'flashcards' }, { label: 'Study' }];
+function studyCrumbs(deck, last = 'Study') {
+  if (!deck) return [{ label: 'Flashcards', to: 'flashcards' }, { label: last }];
   const trail = fileCrumbs(deck);
   return [
     ...trail.slice(0, -1),
     { label: deck.title, to: `deck/${deck.id}` },
-    { label: 'Study' },
+    { label: last },
   ];
 }
 
@@ -775,6 +776,10 @@ async function reviewSession(host, deckId, scope = null) {
   let shownAt = Date.now();
   let done = 0;
   let revealTimer = null;
+  // The explanation of the card on screen, once it has been asked for. Held
+  // rather than re-requested: draw() runs on every reveal and settings change,
+  // and each explanation is a paid request.
+  let explainer = null;
   // Audio review reads each card aloud — front, then back on reveal. It is
   // keyed so a redraw (progress bar, a settings change) never restarts a
   // sentence mid-word; only a genuinely new face speaks.
@@ -794,14 +799,17 @@ async function reviewSession(host, deckId, scope = null) {
     return;
   }
 
+  // The sitting sits inside the app rather than replacing it: the crumbs stay
+  // above it, so it is clear at a glance which deck is being studied and there
+  // is a way back that is not a keyboard shortcut.
   const body = el('div', { class: 'study' });
-  mount(host, body);
+  mount(host, topbar(studyCrumbs(deck)), body);
 
   const onKey = (event) => {
     if (!paneIsActive(host)) return;
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName) || event.target?.isContentEditable) return;
-    if (!revealed && (event.key === ' ' || event.key === 'Enter')) { event.preventDefault(); revealed = true; draw(); return; }
+    if (!revealed && (event.key === ' ' || event.key === 'Enter')) { event.preventDefault(); revealed = true; sfx('flip'); draw(); return; }
     if (revealed && ['1', '2', '3', '4'].includes(event.key)) { event.preventDefault(); rate(Number(event.key)); }
     if (event.key === 'Escape') navigate(deckId ? `deck/${deckId}` : 'flashcards');
   };
@@ -824,6 +832,7 @@ async function reviewSession(host, deckId, scope = null) {
     if (rating === 1 && prefs.requeueAgain) queue.push(card);
     index += 1;
     revealed = false;
+    explainer = null;
     shownAt = Date.now();
 
     if (index >= queue.length) { await finish(); return; }
@@ -843,6 +852,7 @@ async function reviewSession(host, deckId, scope = null) {
     // waiting further along this same sitting.
     queue = queue.filter((other, at) => at < index || other.id !== card.id);
     revealed = false;
+    explainer = null;
     shownAt = Date.now();
     if (index >= queue.length) { await finish(); return; }
     draw();
@@ -872,6 +882,9 @@ async function reviewSession(host, deckId, scope = null) {
         el('button', { class: 'btn primary lg', text: 'Done', onclick: () => navigate(deckId ? `deck/${deckId}` : 'flashcards') }),
       ),
     );
+    // Paper first, then the streak veil over it if the day has just counted —
+    // the confetti is for having finished, which is true either way.
+    if (done) { confetti(); sfx('finish'); }
     if (counted) {
       await celebrateStreak({ from: was, to: now, best: now >= (after.best_streak_days ?? 0) && now > (before?.best_streak_days ?? 0) });
       if (streakNode.isConnected) rollNumber(streakNode, was, now, 500);
@@ -965,15 +978,19 @@ async function reviewSession(host, deckId, scope = null) {
                 : null,
               card.source_file_id ? icon('link-simple') : null,
               card.source_file_id ? el('span', null, 'From ', el('span', { style: { color: 'var(--color-accent-300)' }, text: fileById(card.source_file_id)?.title ?? 'a linked file' })) : null,
-              revealed && ai && prefs.showExplain
+              revealed && ai && prefs.showExplain && !explainer
                 ? el('button', {
                     class: 'chip ai-chip', type: 'button', title: 'Ask AI to explain this card',
-                    onclick: () => askAbout(`Explain this flashcard so I understand it rather than memorise it, with a memorable example.\n\nQuestion: ${shownFront}\nAnswer: ${shownBack}`, { withPage: false }),
+                    onclick: () => {
+                      explainer = explainCard({ front: shownFront, back: shownBack });
+                      draw();
+                    },
                   }, icon('sparkle', { size: 13 }), 'Explain')
                 : null,
               prefs.showCardInfo ? el('span', { style: { marginLeft: 'auto' }, text: `Seen ${card.repetitions} ${card.repetitions === 1 ? 'time' : 'times'}${card.interval_days ? ` · interval ${card.interval_days}d` : ''}` }) : null,
             ),
           ),
+          revealed && explainer ? explainer : null,
           revealed
             ? el('div', { class: 'ratings', role: 'group', 'aria-label': 'How well did you recall it?' }, RATINGS.map((r) => el('button', {
                 class: 'rating' + (r.primary ? ' good' : ''),
@@ -984,7 +1001,7 @@ async function reviewSession(host, deckId, scope = null) {
                 r.label,
                 el('span', { class: 'k', text: String(r.value), 'aria-hidden': 'true' }),
               )))
-            : el('button', { class: 'reveal-hint', onclick: () => { revealed = true; draw(); } },
+            : el('button', { class: 'reveal-hint', onclick: () => { revealed = true; sfx('flip'); draw(); } },
                 'Press ', el('span', { class: 'key', text: 'Space' }), prefs.autoReveal > 0 ? ` to reveal the answer · shows in ${prefs.autoReveal}s` : ' to reveal the answer'),
         ),
       ),
@@ -1044,7 +1061,7 @@ export async function testView(route, host) {
   }
 
   const body = el('div', { class: 'study' });
-  mount(host, body);
+  mount(host, topbar(studyCrumbs(deck, 'Test')), body);
   const back = () => navigate(deckId ? `deck/${deckId}` : 'flashcards');
   const ai = await aiAvailable().catch(() => false);
   let timerId = null;
@@ -1124,6 +1141,9 @@ export async function testView(route, host) {
 
     let current;
     try { ({ test: current } = await api.startTest({ deckId })); } catch (err) { reportError(err); return; }
+    // Taken now, before the first answer is graded: a test is study like any
+    // other, and it can be the sitting that counts the day.
+    const dayBefore = await studyDay();
 
     let index = 0;
     let shownAt = Date.now();
@@ -1175,9 +1195,13 @@ export async function testView(route, host) {
       prepared = mode === 'choice' ? { options: choicesFor(card) } : mode === 'truefalse' ? statementFor(card) : null;
     };
 
+    let explainer = null;
+
     async function submit(correct, given) {
       const card = pool[index];
       lastResult = { correct, expected: card.back, given };
+      explainer = null;
+      sfx(correct ? 'right' : 'wrong');
       try {
         const res = await api.answerTest(current.id, {
           cardId: card.id,
@@ -1192,6 +1216,7 @@ export async function testView(route, host) {
     function advance() {
       index += 1;
       lastResult = null;
+      explainer = null;
       shownAt = Date.now();
       if (index >= pool.length) { void end(); return; }
       prepare();
@@ -1209,6 +1234,8 @@ export async function testView(route, host) {
       } catch (err) { reportError(err); }
       await loadLibrary();
       if (!body.isConnected) return;
+      confetti();
+      sfx('finish');
       mount(body,
         el('div', { class: 'empty-state', style: { flex: '1' } },
           icon('seal-check', { size: 34 }),
@@ -1220,6 +1247,29 @@ export async function testView(route, host) {
           ),
         ),
       );
+      // The score first, then the streak over it if this was the day's first
+      // study — the same order as at the end of a review.
+      if (current.answered_count) await celebrateIfStreakGrew(dayBefore);
+    }
+
+    /**
+     * "Explain" under a marked card. The answer is held on `explainer` rather
+     * than re-requested, because `draw()` runs again for every keystroke of
+     * the scoreboard and an explanation is a paid request.
+     */
+    function explainRow(card) {
+      if (explainer) return explainer;
+      return el('button', {
+        type: 'button', class: 'chip ai',
+        onclick: () => {
+          explainer = explainCard({
+            front: card.front,
+            back: card.back,
+            given: lastResult?.correct ? '' : (lastResult?.given ?? ''),
+          });
+          draw();
+        },
+      }, icon('sparkle', { size: 13 }), 'Explain this');
     }
 
     function answerArea(card) {
@@ -1270,15 +1320,18 @@ export async function testView(route, host) {
         el('div', { class: 'study-body' },
           el('div', { class: 'card-face' },
             el('span', { class: 'section-label plain', text: `TEST MODE — ${label}` }),
-            el('div', { class: 'card-surface' + (lastResult ? '' : ' hidden-answer') },
+            el('div', { class: 'card-surface' + (lastResult ? (lastResult.correct ? ' right' : ' wrong') : ' hidden-answer') },
               card.topic ? el('div', { class: 'topic', text: card.topic }) : null,
               el('div', { class: 'q', text: card.front }),
               readOcclusion(card) ? occlusionFigure(readOcclusion(card), { revealed: Boolean(lastResult) }) : null,
               lastResult
                 ? el('div', { class: 'a' },
-                    el('div', { style: { color: lastResult.correct ? 'var(--color-accent-300)' : 'oklch(0.78 0.12 25)', marginBottom: '10px' }, text: lastResult.correct ? 'Correct' : 'Not quite' }),
+                    el('div', { class: 'verdict' },
+                      icon(lastResult.correct ? 'check' : 'x', { size: 14 }),
+                      lastResult.correct ? 'Correct' : 'Not quite'),
                     el('div', { text: card.back }),
                     !lastResult.correct && mode === 'typed' && lastResult.given ? el('div', { class: 'dim', style: { marginTop: '8px', fontSize: '13px' }, text: `You wrote: ${lastResult.given}` }) : null,
+                    ai ? explainRow(card) : null,
                   )
                 : null,
               el('div', { class: 'foot' },

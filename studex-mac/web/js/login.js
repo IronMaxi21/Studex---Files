@@ -2,6 +2,7 @@ import { el, mount } from './dom.js';
 import { logoMark } from './logo.js';
 import { api, ApiError } from './api.js';
 import { isNative } from './native.js';
+import { toast } from './store.js';
 
 const MIN_PASSWORD = 12;
 
@@ -89,7 +90,12 @@ export function loginView(onSuccess) {
             return;
           }
         } else {
-          await api.login(email.value.trim(), password.value);
+          const result = await api.login(email.value.trim(), password.value);
+          // One live session per account. If this sign-in ended one, say so
+          // here rather than leaving the other Mac to work it out alone.
+          if (result?.signedOutElsewhere > 0) {
+            toast('Signed in here. Studex signed out your other device.');
+          }
         }
         onSuccess();
         return;

@@ -112,7 +112,12 @@ function int(name: string, fallback: number): number {
  * Unset, the server keeps its own argon2 credentials. That is what every
  * existing install is, and it is the only mode that works with no network.
  */
-function supabaseSettings(): { url: string; anonKey: string; serviceKey: string | null } | null {
+function supabaseSettings(): {
+  url: string;
+  anonKey: string;
+  serviceKey: string | null;
+  emailRedirectUrl: string;
+} | null {
   const rawUrl = process.env.SUPABASE_URL?.trim();
   const anonKey = process.env.SUPABASE_ANON_KEY?.trim();
   if (!rawUrl && !anonKey) return null;
@@ -137,7 +142,38 @@ function supabaseSettings(): { url: string; anonKey: string; serviceKey: string 
       `SUPABASE_URL must be the project origin with no path — use ${parsed.origin}, not ${rawUrl}`,
     );
   }
-  return { url: parsed.origin, anonKey, serviceKey: serviceRoleKey(anonKey) };
+  return {
+    url: parsed.origin,
+    anonKey,
+    serviceKey: serviceRoleKey(anonKey),
+    emailRedirectUrl: emailRedirectUrl(),
+  };
+}
+
+/**
+ * Where the link in a Supabase email lands.
+ *
+ * Supabase's own default drops the person on a bare JSON response or on
+ * localhost, neither of which means anything to someone who opened the mail on
+ * their phone. It goes instead to a page Studex owns, which says the address is
+ * confirmed and offers to open the app that is already installed.
+ *
+ * The same URL has to be on the project's redirect allow-list, or Supabase
+ * quietly substitutes the Site URL and the link lands nowhere useful.
+ */
+function emailRedirectUrl(): string {
+  const raw = process.env.SUPABASE_EMAIL_REDIRECT_URL?.trim();
+  if (!raw) return 'https://ironmaxi21.github.io/Studex-releases/confirmed/';
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error(`SUPABASE_EMAIL_REDIRECT_URL is not a valid URL: ${raw}`);
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error('SUPABASE_EMAIL_REDIRECT_URL must be https — it is sent to strangers by email.');
+  }
+  return parsed.toString();
 }
 
 /**
@@ -328,6 +364,19 @@ export const config = {
    */
   appVersion: process.env.STUDEX_VERSION?.trim() || null,
   appBuild: process.env.STUDEX_BUILD?.trim() || null,
+  /**
+   * Which kind of build the shell around this server is: `release` for the app
+   * people download, `dev` for anything else.
+   *
+   * Only the release build stamps it, and the default runs that way round on
+   * purpose. A server started by hand, by the tests, or by someone hosting
+   * Studex themselves says nothing here and keeps every screen — defaulting to
+   * `release` would lock those installs out of the one screen where they can
+   * set a key at all.
+   */
+  channel: process.env.STUDEX_CHANNEL?.trim().toLowerCase() === 'release' ? 'release' : 'dev',
+  /** Shorthand: this server is inside the app that ships. */
+  isRelease: process.env.STUDEX_CHANNEL?.trim().toLowerCase() === 'release',
   trustProxy: (process.env.TRUST_PROXY ?? 'false').toLowerCase() === 'true',
   /**
    * Requests allowed per IP per 5 minutes on the credential endpoints. The
@@ -369,6 +418,13 @@ export const config = {
     idleTtlMs: 14 * 24 * 60 * 60 * 1000,
     /** Hard cap regardless of activity. */
     absoluteTtlMs: 90 * 24 * 60 * 60 * 1000,
+    /**
+     * How many devices may hold a live session on one account at once. One:
+     * an account is one student's account, so signing in somewhere new signs
+     * the previous device out rather than adding a seat to a shared login.
+     * Self-hosted installs can raise it; the shipped product does not.
+     */
+    maxConcurrent: int('MAX_CONCURRENT_SESSIONS', 1),
     cookieName: 'studex_session',
     csrfCookieName: 'studex_csrf',
     csrfHeaderName: 'x-csrf-token',

@@ -18,8 +18,9 @@ import { el, icon, mount, clear } from '../dom.js';
 import { api } from '../api.js';
 import { toast, reportError } from '../store.js';
 import { navigate } from '../router.js';
-import { renderInline } from '../inline.js';
+import { renderInline, renderTypeset } from '../inline.js';
 import { renderMath, loadKatex } from '../math.js';
+import { highlight, LANGUAGES } from '../syntax.js';
 import { canvasPreview } from '../canvas-preview.js';
 import { relative, FILE_ICON, FILE_LABEL } from '../format.js';
 
@@ -288,10 +289,60 @@ function renderShared(block, index, ctx) {
       spellcheck: canEdit ? 'true' : null,
       'data-placeholder': canEdit ? placeholder : null,
     });
-    node.replaceChildren(...renderInline(value ?? ''));
+    // Typeset at rest, plain under the caret — the same swap the editor makes,
+    // and for the same reason: a caret offset is an offset into the line's own
+    // text, which a rendered equation is not.
+    let raw = value ?? '';
+    node.replaceChildren(...renderTypeset(raw));
     if (!canEdit) return node;
-    node.addEventListener('input', () => { blocks[index] = { ...blocks[index], [field]: node.textContent }; queue(); });
-    node.addEventListener('blur', () => node.replaceChildren(...renderInline(node.textContent)));
+    node.dataset.typeset = '1';
+    const paintEdit = () => {
+      if (!node.dataset.typeset) return;
+      delete node.dataset.typeset;
+      node.replaceChildren(...renderInline(raw));
+    };
+    node.addEventListener('pointerdown', paintEdit);
+    node.addEventListener('focus', paintEdit);
+    node.addEventListener('input', () => { raw = node.textContent; blocks[index] = { ...blocks[index], [field]: raw }; queue(); });
+    node.addEventListener('blur', () => {
+      raw = node.textContent;
+      node.replaceChildren(...renderTypeset(raw));
+      node.dataset.typeset = '1';
+    });
+    return node;
+  };
+
+  /**
+   * The same swap as `line`, with syntax colours in place of typeset maths.
+   * Highlighted at rest, one flat run of text while the caret is in it, so an
+   * offset on screen stays an offset into the stored code.
+   */
+  const codeLine = () => {
+    const node = el('div', {
+      class: 'btext code-source',
+      contenteditable: canEdit ? 'plaintext-only' : null,
+      spellcheck: canEdit ? 'false' : null,
+      'data-placeholder': canEdit ? 'Write or paste code' : null,
+    });
+    let raw = block.text ?? '';
+    const lang = block.language && LANGUAGES[block.language] ? block.language : 'plain';
+    const paintRest = () => { node.replaceChildren(...highlight(raw, lang)); node.dataset.lit = '1'; };
+    paintRest();
+    if (!canEdit) return node;
+    const paintEdit = () => {
+      if (!node.dataset.lit) return;
+      delete node.dataset.lit;
+      node.textContent = raw;
+    };
+    node.addEventListener('pointerdown', paintEdit);
+    node.addEventListener('focus', paintEdit);
+    node.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab' || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      document.execCommand('insertText', false, '  ');
+    });
+    node.addEventListener('input', () => { raw = node.textContent; blocks[index] = { ...blocks[index], text: raw }; queue(); });
+    node.addEventListener('blur', () => { raw = node.textContent; paintRest(); });
     return node;
   };
 
@@ -331,7 +382,10 @@ function renderShared(block, index, ctx) {
       return wrap(el('div', { class: 'divider-block' }));
 
     case 'code':
-      return wrap(line(block.text, 'Code'));
+      return wrap(el('div', { class: 'code-block' },
+        el('div', { class: 'code-bar' }, el('span', { class: 'code-lang-static', text: LANGUAGES[block.language]?.label ?? 'Plain text' })),
+        codeLine(),
+      ));
 
     case 'math':
       return wrap(sharedEquation(block, index, ctx));

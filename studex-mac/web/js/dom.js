@@ -159,7 +159,7 @@ export function colorValue(color) {
  * (`sky`, `lime`…) so existing folders and notes keep their colour; only the
  * names people read are the plain ones.
  */
-const COLOR_NAMES = { accent: 'Accent', 'accent-2': 'Purple', violet: 'Purple', sky: 'Blue', teal: 'Teal', lime: 'Green', amber: 'Yellow', rose: 'Red', neutral: 'Grey' };
+const COLOR_NAMES = { accent: 'Accent', 'accent-2': 'Purple', violet: 'Purple', sky: 'Blue', teal: 'Teal', lime: 'Green', amber: 'Yellow', rose: 'Red', neutral: 'Grey', grey: 'Grey' };
 
 export function colorLabel(color) {
   if (/^#[0-9a-fA-F]{6}$/.test(color ?? '')) return 'Custom';

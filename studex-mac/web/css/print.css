@@ -240,3 +240,30 @@
     margin-bottom: 2mm;
   }
 }
+
+@media print {
+  /* Marks on paper.
+
+     A printer will drop a background unless it is told not to, so a highlight
+     that survives the screen arrives as plain text: `print-color-adjust` is
+     what keeps the wash on the page. The marker characters themselves never
+     print — they are an editing affordance, and `==sky|like this==` on a
+     handout is worse than no colour at all.
+
+     A coloured word prints in its colour where the printer has colour, and
+     stays legible where it does not: the ramp is taken a shade darker than the
+     screen's so it holds on white at 100% black as well. */
+  .em-h {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: color-mix(in srgb, var(--hl, #d6b36a) 38%, white);
+  }
+  .em-k {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    --ink-l: 0.46;
+    --ink-c: 0.15;
+  }
+  .em-k.tx-grey { --ink-c: 0; --ink-l: 0.45; }
+  .mk { display: none !important; }
+}

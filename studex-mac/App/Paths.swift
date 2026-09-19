@@ -15,6 +15,25 @@ enum Paths {
         devRoot ?? Bundle.main.resourceURL ?? Bundle.main.bundleURL
     }
 
+    /// Whether this build is one of ours rather than one someone downloaded.
+    ///
+    /// True when the shell is running out of the source tree, and true when
+    /// the bundle is not stamped `release` — which build-app.sh only stamps
+    /// when it is building the thing that leaves this machine. The default
+    /// runs that way round deliberately: a bundle with no stamp at all is a
+    /// hand-assembled one, and treating it as a developer build keeps the
+    /// developer screens reachable without a flag. There is no environment
+    /// variable that flips it back on in a release build, because then it
+    /// would not be hidden — it would be a suggestion.
+    static var isDeveloperBuild: Bool {
+        if devRoot != nil { return true }
+        let channel = Bundle.main.infoDictionary?["StudexChannel"] as? String
+        return channel?.lowercased() != "release"
+    }
+
+    /// `dev` or `release`, as the backend and the web UI know it.
+    static var channel: String { isDeveloperBuild ? "dev" : "release" }
+
     static var webDirectory: URL { resources.appendingPathComponent("web", isDirectory: true) }
 
     static var serverDirectory: URL { resources.appendingPathComponent("server", isDirectory: true) }

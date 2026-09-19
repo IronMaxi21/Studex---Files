@@ -9,6 +9,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import * as ai from '../domain/ai.js';
+import { may } from '../domain/capabilities.js';
 import { z } from 'zod';
 import { AiError } from '../lib/ai.js';
 import { clearKey, currentKey, keyHint, keySource, saveKey } from '../lib/ai-key.js';
@@ -47,13 +48,41 @@ const LOOPBACK = new Set(['127.0.0.1', '::1', 'localhost']);
 /**
  * Whether this server may have its key changed over HTTP.
  *
- * The desktop app's server listens on loopback and belongs to whoever is at the
- * Mac, so its Settings screen can set the key. A server on a public address is
- * someone's deployment, and its key belongs in its environment, not in a form
- * any signed-in account could submit.
+ * Two separate reasons to say no. A server on a public address is someone's
+ * deployment, and its key belongs in its environment, not in a form any
+ * signed-in account could submit. And the app people download brings its own
+ * key, which is ours and is what the allowance is counted against — swapping
+ * it out is not something that build offers, so the endpoints refuse it here
+ * rather than relying on the UI to hide the field.
  */
 function keyEditable(): boolean {
+  if (config.isRelease) return false;
   return !config.isProd || LOOPBACK.has(config.host);
+}
+
+/**
+ * Whether a key saved in Settings may be taken away again.
+ *
+ * Deliberately not the same question as setting one. Someone who added their
+ * own key in an older build must be able to stop using it and fall back to the
+ * one the app brings, or they are stuck with a key nobody can remove. Taking
+ * it away reveals nothing and puts them back on the default.
+ */
+function keyRemovable(): boolean {
+  if (keySource() !== 'settings') return false;
+  return keyEditable() || config.isRelease;
+}
+
+/**
+ * Whether the developer-only screens are reachable.
+ *
+ * The model roster and the raw call log are how the build is debugged, not
+ * features of the product: they name the models behind each feature and list
+ * every prompt's tokens and timing. The release build hides them, and these
+ * are the routes that back them, so hiding them is enforced here too.
+ */
+function developerVisible(): boolean {
+  return may('developer');
 }
 
 const keySchema = z.object({
@@ -87,6 +116,11 @@ function keyStatus() {
     keySource: keySource(),
     keyHint: keyHint(),
     keyEditable: keyEditable() && keySource() !== 'env',
+    keyRemovable: keyRemovable(),
+    // What the UI uses to decide whether to draw the key field and the
+    // developer screens at all, rather than drawing them dead.
+    developer: developerVisible(),
+    builtinKey: keySource() === 'builtin',
   };
 }
 
@@ -99,8 +133,12 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
       available,
       usage: available ? ai.usageFor(user.id) : null,
       ...keyStatus(),
-      models: config.ai.models,
-      roles: ai.ROLE_OF,
+      // The roster is only of use to whoever is changing it, and naming the
+      // models is naming how the product is built. Release builds get none.
+      models: developerVisible() ? config.ai.models : null,
+      roles: developerVisible() ? ai.ROLE_OF : null,
+      // The weights stay: they are what the monthly allowance is counted in,
+      // which is the person's business whatever build they are on.
       weights: ai.WEIGHT,
     };
   });
@@ -122,14 +160,15 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
 
   app.delete('/ai/key', async (req) => {
     requireAuth(req);
-    if (!keyEditable()) throw forbidden('This server’s AI key is set where it is deployed, not from the app.');
     if (keySource() === 'env') throw badRequest('This install’s key comes from its environment, and cannot be removed here.');
+    if (!keyRemovable()) throw forbidden('This server’s AI key is set where it is deployed, not from the app.');
     clearKey();
     return keyStatus();
   });
 
   app.get('/ai/calls', async (req) => {
     const { user } = requireAuth(req);
+    if (!developerVisible()) throw forbidden('The AI call log is not available in this build.');
     return { calls: ai.recentCalls(user.id) };
   });
 

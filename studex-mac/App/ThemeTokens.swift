@@ -7,9 +7,9 @@
 import AppKit
 
 extension Theme {
-    /// `--chrome-bg`, #EDEEF2.
-    static let lightChrome = NSColor(srgbRed: 0.9299, green: 0.9336, blue: 0.9487, alpha: 1)
+    /// `--chrome-bg`, #EEEDE8.
+    static let lightChrome = NSColor(srgbRed: 0.9336, green: 0.9299, blue: 0.9111, alpha: 1)
 
-    /// `--chrome-bg`, #121420.
-    static let darkChrome = NSColor(srgbRed: 0.0725, green: 0.0791, blue: 0.1252, alpha: 1)
+    /// `--chrome-bg`, #161715.
+    static let darkChrome = NSColor(srgbRed: 0.0856, green: 0.0889, blue: 0.0824, alpha: 1)
 }

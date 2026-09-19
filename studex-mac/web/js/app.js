@@ -23,8 +23,9 @@ import { installFileDrop } from './drop.js';
 import { importDocument, isImportableDocument } from './import-doc.js';
 import { pageTip } from './tips.js';
 import { hasOnboarded, onboardingView } from './onboarding.js';
-import { initFocus, toggleFocus } from './focus.js';
+import { initFocus, toggleFocus, openFocus, startFocus, pauseFocus, resumeFocus, endFocus } from './focus.js';
 import { showProFeatures } from './pro.js';
+import { initSfx } from './sfx.js';
 import { KINDS as EVENT_KINDS } from './views/events.js';
 
 import { homeView } from './views/home.js';
@@ -1119,6 +1120,12 @@ onCommand({
     navigate('settings/updates');
     void checkForUpdates({ manual: true }).catch(reportError);
   }),
+  // The focus timer, driven from the menu bar. Start opens the overlay too:
+  // a block that begins with no visible clock is a block you forget you are in.
+  'focus-start': whenSignedIn(() => { openFocus(); void startFocus(); }),
+  'focus-pause': whenSignedIn(() => { void pauseFocus(); }),
+  'focus-resume': whenSignedIn(() => { void resumeFocus(); }),
+  'focus-stop': whenSignedIn(() => { void endFocus(); }),
   'toggle-sidebar': whenSignedIn(() => setSidebarHidden(!sidebarIsHidden())),
   'toggle-split': whenSignedIn(() => {
     if (isSplit()) closePane(focusedPane());
@@ -1319,11 +1326,16 @@ function liveWatch() {
 
 let sessionLost = false;
 
-onUnauthorized(() => {
+onUnauthorized((code) => {
   if (sessionLost || !state.user) return;
   sessionLost = true;
   state.user = null;
-  toast('Your session expired. Please sign in again.');
+  // A Studex account holds one live session. When the session ended because
+  // the account signed in somewhere else, say so — the person either moved
+  // Macs or someone else is using their account, and both are worth knowing.
+  toast(code === 'session_replaced'
+    ? 'Signed out: this account signed in on another device.'
+    : 'Your session expired. Please sign in again.');
   showLogin();
 });
 
@@ -1427,6 +1439,7 @@ async function boot() {
   state.ready = true;
   startNotifications();
   startBadge();
+  initSfx();
   void initFocus();
   startUpdates();
   syncSpotlight();

@@ -22,9 +22,15 @@ export class ApiError extends Error {
   }
 }
 
-/** Listeners fired when the server reports the session is no longer valid. */
+/**
+ * Listeners fired when the server reports the session is no longer valid.
+ * Each is handed the server's error code, so 'session_replaced' — this account
+ * signed in on another device — can be explained rather than blamed on an
+ * expiry.
+ */
 const unauthorizedHandlers = new Set();
 export function onUnauthorized(fn) { unauthorizedHandlers.add(fn); }
+function notifyUnauthorized(code) { for (const fn of unauthorizedHandlers) fn(code ?? null); }
 
 function readCsrfToken() {
   for (const part of document.cookie.split(';')) {
@@ -170,12 +176,12 @@ async function attemptRequest(method, path, { body, query, raw, timeout = DEFAUL
       throw transportError(cause);
     }
 
-    if (res.status === 401) {
-      for (const fn of unauthorizedHandlers) fn();
-    }
-
     if (raw) {
-      if (!res.ok) throw await toError(res);
+      if (!res.ok) {
+        const failure = await toError(res);
+        if (res.status === 401) notifyUnauthorized(failure.code);
+        throw failure;
+      }
       return res;
     }
 
@@ -194,6 +200,7 @@ async function attemptRequest(method, path, { body, query, raw, timeout = DEFAUL
 
     if (!res.ok) {
       const err = payload?.error;
+      if (res.status === 401) notifyUnauthorized(err?.code);
       throw new ApiError(
         res.status,
         err?.code ?? 'error',
@@ -250,9 +257,9 @@ export function upload(path, formData, { onProgress } = {}) {
     xhr.addEventListener('load', () => {
       stopWatch();
       setReachable(true);
-      if (xhr.status === 401) { for (const fn of unauthorizedHandlers) fn(); }
       let payload = null;
       try { payload = xhr.responseText ? JSON.parse(xhr.responseText) : null; } catch { /* not JSON */ }
+      if (xhr.status === 401) notifyUnauthorized(payload?.error?.code);
       if (xhr.status >= 200 && xhr.status < 300) { resolve(payload); return; }
       const err = payload?.error;
       reject(new ApiError(
@@ -402,10 +409,15 @@ export const api = {
   },
   createFile: (body) => post('/api/files', body),
   file: (id) => get(`/api/files/${id}`),
+  /** What a file holds, without opening it: first lines, first cards, highlights, a sketch. */
+  filePreview: (id) => get(`/api/files/${id}/preview`),
   updateFile: (id, body) => patch(`/api/files/${id}`, body),
   trashFile: (id) => del(`/api/files/${id}`),
   restoreFile: (id) => post(`/api/files/${id}/restore`),
   purgeFile: (id) => del(`/api/files/${id}/purge`),
+  /** The states a file was in before sync or a restore replaced them, newest first. */
+  fileRevisions: (id) => get(`/api/files/${id}/revisions`),
+  restoreRevision: (id, revisionId) => post(`/api/files/${id}/revisions/${revisionId}/restore`),
   storage: () => get('/api/storage'),
 
   /* documents + canvas */
@@ -533,6 +545,9 @@ export const api = {
   statsNeedsWork: () => get('/api/stats/needs-work'),
 
   /* settings */
+  /** What this build offers: the developer screens, the layout choice, beta releases. */
+  capabilities: () => get('/api/capabilities'),
+
   settings: () => get('/api/settings'),
   updateSettings: (body) => patch('/api/settings', body),
   deviceSettings: (deviceId) => get(`/api/settings/devices/${deviceId}`),

@@ -63,6 +63,28 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 }
 
 /**
+ * Staying up.
+ *
+ * This process is not a server somebody administers — it is the inside of a
+ * desktop app, and when it exits a window full of someone's revision goes with
+ * it. Node's default for an unhandled rejection is to end the process, which
+ * means one failed background fetch, one socket that hung up at the wrong
+ * moment, anywhere in the codebase, closes the app. Nothing outside a request
+ * is worth that: the request handlers have their own error handling, the
+ * database is unharmed by a rejected promise somewhere else, and the honest
+ * response to an error with nobody waiting on it is to write it down and carry
+ * on. A crash loop cannot hide here either — the shell watches this process and
+ * says so if it keeps needing to be restarted.
+ */
+process.on('unhandledRejection', (err) => {
+  app.log.error({ err }, 'unhandled rejection — continuing');
+});
+
+process.on('uncaughtException', (err) => {
+  app.log.error({ err }, 'uncaught exception — continuing');
+});
+
+/**
  * When the desktop shell launches this process it holds the write end of our
  * stdin open. A clean quit sends SIGTERM, but a crash or a force quit does
  * not — and this process would then survive its parent, holding the database

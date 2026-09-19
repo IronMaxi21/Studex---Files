@@ -9,6 +9,7 @@ enum ShellError: LocalizedError {
     case noFreePort
     case serverExited(code: Int32, log: String)
     case serverNotReady(log: String)
+    case serverStalled(log: String)
     case secretUnavailable
 
     var errorDescription: String? {
@@ -25,6 +26,8 @@ enum ShellError: LocalizedError {
             return "The Studex backend stopped while starting up."
         case .serverNotReady:
             return "The Studex backend did not finish starting."
+        case .serverStalled:
+            return "Studex stopped responding."
         case .secretUnavailable:
             return "Studex could not create its session key."
         }
@@ -48,6 +51,8 @@ enum ShellError: LocalizedError {
             return "It exited with status \(code).\n\n\(log)"
         case .serverNotReady(let log):
             return "It was still not answering after 30 seconds.\n\n\(log)"
+        case .serverStalled(let log):
+            return "It stopped answering and could not be brought back.\n\n\(log)"
         case .secretUnavailable:
             return "Check that \(Paths.dataDirectory.path) exists and is writable."
         }

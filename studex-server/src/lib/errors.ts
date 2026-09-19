@@ -20,6 +20,13 @@ export const badRequest = (msg = 'Invalid request', details?: unknown) =>
   new ApiError(400, 'bad_request', msg, details);
 export const unauthorized = (msg = 'Authentication required') =>
   new ApiError(401, 'unauthorized', msg);
+/**
+ * This device's session ended because the account signed in elsewhere. The
+ * client uses the code to explain itself rather than blaming an expiry.
+ */
+export const sessionReplaced = (
+  msg = 'Signed out because this account signed in on another device.',
+) => new ApiError(401, 'session_replaced', msg);
 export const forbidden = (msg = 'Not permitted') => new ApiError(403, 'forbidden', msg);
 /** The account is not entitled to this. Paying is what changes the answer. */
 export const paymentRequired = (msg = 'Payment required') =>

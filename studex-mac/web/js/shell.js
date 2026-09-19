@@ -4,6 +4,7 @@ import { state, childFolders, filesInFolder, folderById, setSidebarHidden, sideb
 import { FILE_ICON } from './format.js';
 import { navigate, currentRoute, isSplit, openBeside, canSplit, swapPanes, closePane, isPinned, setPinned } from './router.js';
 import { openMenu } from './menu.js';
+import { openFeedbackSheet } from './feedback.js';
 import { openPalette } from './palette.js';
 import { logoMark } from './logo.js';
 import { chatButton } from './chat.js';
@@ -610,6 +611,7 @@ function openAccountMenu(anchor) {
     { icon: 'paint-brush', label: 'Appearance', onSelect: () => navigate('settings') },
     { sep: true },
     { icon: 'lightbulb', label: 'Show tips again', onSelect: () => { resetTips(); toast('Tips will show again on each page.'); } },
+    { icon: 'paper-plane-tilt', label: 'Send feedback…', onSelect: () => void openFeedbackSheet('improvement') },
     { sep: true },
     { icon: 'sign-out', label: 'Sign out', onSelect: () => createHandlers.signOut?.() },
   ]);

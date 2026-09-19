@@ -22,6 +22,7 @@ import { api } from './api.js';
 import { dialog } from './dialog.js';
 import { isNative, prepareUpdate, restartToUpdate, askUpdateStatus, watchUpdate } from './native.js';
 import { log } from './log.js';
+import { may } from './store.js';
 
 const FIRST_CHECK_MS = 15_000;
 /** How often the timer wakes to see whether a check is due. */
@@ -76,7 +77,10 @@ export function updatePrefs() {
   const hours = Number(read(KEYS.interval, '4'));
   return {
     auto: autoUpdateEnabled(),
-    channel: read(KEYS.channel, 'stable') === 'beta' ? 'beta' : 'stable',
+    // A build that may not take unfinished releases reads as stable however
+    // this Mac was once set, so the screen and the request agree with the
+    // answer the server is going to give anyway.
+    channel: may('betaChannel') && read(KEYS.channel, 'stable') === 'beta' ? 'beta' : 'stable',
     interval: INTERVALS.some((i) => i.hours === hours) ? hours : 4,
     whatsNew: read(KEYS.whatsNew, 'on') !== 'off',
     lastChecked: Number(read(KEYS.lastChecked, '0')) || null,

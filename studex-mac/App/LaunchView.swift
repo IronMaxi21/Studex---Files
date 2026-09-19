@@ -7,11 +7,17 @@ import AppKit
 /// colours, so the wait reads as part of starting rather than as a stall.
 final class LaunchView: NSView {
     private let spinner = NSProgressIndicator()
-    private let label = NSTextField(labelWithString: "Starting Studex…")
+    private let label: NSTextField
 
     /// `theme` is the one the app last resolved, so the wait is in the colours
     /// the interface is about to appear in rather than in a constant.
-    init(theme: String) {
+    ///
+    /// `message` is what the wait is for. A first launch is starting; a window
+    /// that was showing a page a second ago is coming back, and saying so is
+    /// the difference between a hiccup and an app that appears to have
+    /// restarted itself under the person's hands.
+    init(theme: String, message: String = "Starting Studex…") {
+        label = NSTextField(labelWithString: message)
         super.init(frame: .zero)
         wantsLayer = true
         appearance = Theme.appearance(for: theme)

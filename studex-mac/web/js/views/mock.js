@@ -6,6 +6,8 @@ import { navigate, paneIsActive } from '../router.js';
 import { topbar } from '../shell.js';
 import { plural } from '../format.js';
 import { studyPrefs, saveStudyPrefs } from '../studyprefs.js';
+import { confetti, rollNumber } from '../celebrate.js';
+import { sfx } from '../sfx.js';
 
 /**
  * A mock is deliberately unlike test mode: it spans a subject rather than a
@@ -105,7 +107,7 @@ async function sitting(examId, host) {
   try { ({ mock: exam } = await api.mock(examId)); } catch (err) { reportError(err); back(); return; }
 
   // Already sat: straight to the marked paper.
-  if (exam.ended_at !== null) { results(); return; }
+  if (exam.ended_at !== null) { results({ justMarked: false }); return; }
 
   const subject = exam.subject_id ? subjectById(exam.subject_id) : null;
   const questions = exam.questions;
@@ -174,7 +176,7 @@ async function sitting(examId, host) {
     } catch (err) { reportError(err); }
     await loadLibrary();
     if (!body.isConnected) return;
-    results();
+    results({ justMarked: true });
   }
 
   function draw() {
@@ -224,13 +226,23 @@ async function sitting(examId, host) {
   }
 
   /* ---- the marked paper ---- */
-  function results() {
+  /**
+   * The marked paper. `justMarked` separates finishing one from reopening one:
+   * a paper sat a week ago should not throw paper about when it is looked at
+   * again, and its score should already be on the page rather than counting up.
+   */
+  function results({ justMarked = false } = {}) {
     alive = false;
     clearInterval(timerId);
     document.removeEventListener('keydown', onKey);
     const subj = exam.subject_id ? subjectById(exam.subject_id) : null;
     const total = exam.questions.length;
     const right = exam.questions.filter((q) => q.correct === 1).length;
+    const score = Math.round(exam.score_pct ?? 0);
+    // The figure and its sign are separate nodes so the figure can count up
+    // without the per-cent sign counting with it.
+    const scoreNode = el('span', { text: String(score) });
+    const pct = el('div', { class: 'mock-score-pct' }, scoreNode, el('span', { class: 'sign', text: '%' }));
 
     mount(body,
       el('div', { class: 'study-head' },
@@ -241,7 +253,7 @@ async function sitting(examId, host) {
       el('div', { class: 'study-body' },
         el('div', { class: 'card-face' },
           el('div', { class: 'mock-score' },
-            el('div', { class: 'mock-score-pct', text: `${Math.round(exam.score_pct ?? 0)}%` }),
+            pct,
             el('div', { class: 'dim', text: `${right} of ${total} correct` }),
           ),
           el('span', { class: 'section-label plain', text: 'BY TOPIC — RE-RATED IN YOUR TOPIC MATRIX' }),
@@ -265,5 +277,12 @@ async function sitting(examId, host) {
         ),
       ),
     );
+    if (justMarked) {
+      // Paper for having sat the thing, not for the mark: a mock is worth
+      // finishing at forty per cent, and that is the one most in need of it.
+      confetti();
+      sfx('finish');
+      rollNumber(scoreNode, 0, score, 900);
+    }
   }
 }

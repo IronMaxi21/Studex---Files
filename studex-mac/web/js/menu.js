@@ -122,14 +122,17 @@ export function openMenu(at, items) {
       const row = el('div', { class: 'swatches', role: 'group', 'aria-label': 'Colour' });
       for (const swatch of item.swatches) {
         row.appendChild(el('button', {
-          class: 'swatch' + (swatch.on ? ' on' : ''),
+          // A swatch may name its colour in CSS instead of carrying a value:
+          // a text colour has to move when the theme does, and a stylesheet is
+          // the only place that knows which theme is on.
+          class: 'swatch' + (swatch.class ? ` ${swatch.class}` : '') + (swatch.on ? ' on' : ''),
           title: swatch.label,
           // A swatch is a colour and nothing else, so its name has to be
           // spoken: without this it is a button called "".
           'aria-label': swatch.label,
           role: 'menuitemradio',
           'aria-checked': swatch.on ? 'true' : 'false',
-          style: { background: swatch.color },
+          style: swatch.color ? { background: swatch.color } : null,
           onclick: () => { closeMenu(); swatch.onSelect?.(); },
         }));
       }
@@ -158,6 +161,11 @@ export function openMenu(at, items) {
   y = Math.min(Math.max(8, y), window.innerHeight - rect.height - 10);
   node.style.left = `${Math.max(8, x)}px`;
   node.style.top = `${y}px`;
+  // A menu grows out of the control that opened it, so the corner it grows from
+  // is the corner nearest that control — which, once the menu has been nudged
+  // back on screen, is not always the one that was asked for.
+  node.style.setProperty('--menu-origin-y', y < at.y ? 'bottom' : 'top');
+  node.style.setProperty('--menu-origin-x', x < at.x ? 'right' : 'left');
 
   open = node;
   node.querySelector('.menu-search')?.focus();

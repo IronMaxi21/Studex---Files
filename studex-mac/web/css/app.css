@@ -466,21 +466,119 @@ button.crumb-step:hover { background: color-mix(in srgb, var(--color-text) 8%, t
 .page-title { font: 500 18px/1.15 var(--font-heading); letter-spacing: -0.025em; }
 .page-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 .page-head .note { font: 400 13px/1 var(--font-body); color: var(--color-accent-300); }
+/* Home's greeting line pushes the clock to the far end, where the eye is not
+   already busy reading a name and a countdown. Tabular figures so the minute
+   changing does not move the date. */
+.home-head { justify-content: space-between; padding-top: 2px; }
+/* Home's greeting is the one title on a screen with no other heading above the
+   fold, so it carries the page: large enough to be the thing you land on, with
+   the date and the countdown hanging off its baseline rather than boxed
+   somewhere else. Everywhere else `.page-title` sits under a breadcrumb and
+   stays at its usual size. */
+.home-head .page-title { font: 500 27px/1.12 var(--font-heading); letter-spacing: -0.034em; }
+.home-head .note { font-size: 13px; }
+.home-head .home-clock { font-size: 13px; }
+.home-head .home-clock .time { font-size: 13.5px; }
+.home-clock {
+  display: flex; align-items: baseline; gap: 7px; margin-left: auto;
+  font: 400 12.5px/1 var(--font-body); color: var(--color-neutral-500);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.home-clock .time { color: var(--color-neutral-300); font-weight: 500; }
+.home-clock .sep { color: var(--color-neutral-700); }
 
 h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing: -0.03em; }
 
+/* ── Home: the band of figures ────────────────────────────────────────── */
+/* The four figures across the top of Home. They used to be four bordered
+   tiles, which drew three vertical lines and four boxes to say something the
+   labels already said — that these are four separate numbers. The boxes are
+   gone: what groups them now is one baseline for the kickers, one for the
+   values, and one for the lines underneath, which is what made them read as a
+   row in the first place. The frame was never doing the work.
+
+   They are `.figure` rather than `.stat` on purpose. The same markup on Review,
+   Decks and Statistics is still tiles — those are grids of like-for-like
+   counts inside a page that has other content around them, and there the box
+   is what says where one count ends. Sharing a class would have meant every
+   family override fighting a Home-only exception. */
+.home-stats {
+  display: grid; grid-template-columns: 1.55fr 1fr 1fr 1fr; gap: 0;
+  align-items: stretch;
+  padding: 6px 0 6px;
+}
+.figure { display: flex; flex-direction: column; min-width: 0; padding-right: 30px; }
+.figure .kicker {
+  font: 400 10px/1 var(--font-mono); color: var(--color-neutral-600);
+  letter-spacing: 0.15em;
+}
+.figure.lead .kicker { color: var(--color-accent); }
+.figure .value {
+  margin-top: 13px; font: 500 28px/1.1 var(--font-heading); letter-spacing: -0.038em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* The one figure that is a title rather than a number, so it wraps rather than
+   being cut off at "Intermediate Macroeco…". */
+.figure.lead .value {
+  font-size: 21px; line-height: 1.22; letter-spacing: -0.026em;
+  white-space: normal; text-overflow: clip;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.figure .sub { margin-top: 7px; color: var(--color-neutral-500); font-size: 12.5px; line-height: 1.4; }
+.figure .home-streak-flame i { font-size: 23px; }
+/* Whatever a figure offers sits at its foot, level across the row. */
+.figure .home-plan-link, .figure .home-week { margin-top: auto; padding-top: 10px; }
+
+/* ── Home: the two boxes at the top ──────────────────────────────────── */
+/* The greeting line and the band of figures each get a frame; the panels below
+   them do not. The point is not decoration — it is that the top of Home is a
+   fixed summary that never changes shape, and everything under it is a stack
+   of widgets you chose. One frame each says "this part is the header", which a
+   run of frameless text down the whole page could not.
+
+   Only the preview joins them, further down, because a preview is a window
+   onto a document: it wants an edge for the same reason a document has one. */
+.home-head, .home-stats, .home-panel[data-panel='preview'] {
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-text) 2.5%, transparent);
+}
+.home-head { padding: 16px 20px; }
+.home-stats { padding: 18px 4px 18px 20px; }
+/* With a frame round the band, the figures inside it can be separated by a
+   line rather than by distance alone — the frame already spent the distance. */
+.home-stats .figure + .figure {
+  border-left: 1px solid var(--color-divider);
+  padding-left: 26px;
+}
+.home-panel[data-panel='preview'] { padding: 14px 16px 16px; }
+.home-panel[data-panel='preview'] .home-panel-head { padding-bottom: 12px; }
+
 /* ── cards ────────────────────────────────────────────────────────────── */
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: stretch; }
 .stat {
+  display: flex; flex-direction: column;
   border: 1px solid var(--color-neutral-800);
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  padding: 10px 12px;
+  padding: 13px 14px 12px;
 }
 .stat .kicker { font: 400 10.5px/1 var(--font-mono); color: var(--color-neutral-600); letter-spacing: 0.1em; }
 .stat.lead .kicker { color: var(--color-accent); }
-.stat .value { margin-top: 7px; font: 500 18px/1 var(--font-heading); letter-spacing: -0.02em; }
+.stat .value {
+  margin-top: 9px; font: 500 19px/1.15 var(--font-heading); letter-spacing: -0.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .stat .sub { margin-top: 5px; color: var(--color-neutral-500); font-size: 12px; }
+/* Whatever a tile offers sits at its foot, level across the row. */
+.stat .home-plan-link, .stat .home-week { margin-top: auto; padding-top: 9px; }
+:root:not([data-glass='off']) .stat {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-rim);
+}
 
 .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
 .file-grid.tight { grid-template-columns: repeat(3, 1fr); }
@@ -506,10 +604,55 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
 .two-col { display: grid; grid-template-columns: 1.35fr 1fr; gap: 22px; align-items: start; }
 .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 
-/* Arrangeable Home: panels flow across a responsive grid in the order the
-   student set, and Arrange mode swaps them for a compact reorder list. */
-.home-panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 22px; align-items: start; }
-.home-panels.arranging { display: flex; flex-direction: column; gap: 8px; max-width: 460px; }
+/* Home: panels pack down columns in the order the student set.
+
+   A grid was the obvious thing and the wrong one. Panels are wildly different
+   heights — three deadlines against a file preview — and a grid holds every
+   cell in a row to the tallest of them, so a short panel left a hole under
+   itself and the dashboard read as a half-finished wall. Columns pack instead:
+   each panel takes only the height it needs, the next one starts directly
+   under it, and the browser balances the columns so the shape settles by
+   itself as panels grow and shrink. Which panels appear is a setting, and
+   lives in Settings › Home dashboard. */
+/* A panel is a heading and its widget, not a card.
+
+   The cards came off for the same reason the figures' did: with eight of them
+   packed down three columns the dashboard was a wall of outlines, and the
+   outlines were saying nothing the headings had not already said. What
+   separates one panel from the next now is space — a wide gutter between the
+   columns and a deep one under each panel — and what connects them is that
+   every heading and every row starts on the same left edge as the figures
+   above. The rows inside the widgets keep their own surfaces, so there is
+   still something to click; it is only the frame around the group that has
+   gone.
+
+   The gutter is wide on purpose: with no line down the middle, the gap is the
+   only thing telling one column from its neighbour, and a 16px gap between two
+   frameless columns of text reads as one ragged column. */
+.home-panels { columns: 3 320px; column-gap: 40px; }
+.home-panel {
+  display: flex; flex-direction: column; min-width: 0;
+  /* Nothing is worth reading across a column break, so a panel never splits. */
+  break-inside: avoid; -webkit-column-break-inside: avoid;
+  /* Columns have no row gap of their own: the space under each panel is the
+     panel's, and `break-inside` keeps it attached. */
+  margin: 0 0 30px;
+  /* A panel now sets its own width, so the widgets inside it answer to the
+     panel rather than to the window. */
+  container-type: inline-size;
+}
+.home-panel-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 0 10px;
+}
+.home-panel-head .section-label { padding: 0; }
+.home-panel-body { padding: 0; gap: 11px; }
+/* The preview and the library browser each carry their own frame, which was a
+   second box drawn on the first even when there was a first. */
+.home-panel .preview-panel, .home-panel .library-panel {
+  border: 0; border-radius: 0; background: none; padding: 0;
+}
+
 .arrange-row {
   display: flex; align-items: center; gap: 8px; padding: 8px 12px;
   border: 1px solid var(--color-divider); border-radius: var(--radius-md);
@@ -532,6 +675,7 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
 .plan-row .time { font: 400 11.5px/1 var(--font-mono); color: var(--color-neutral-600); flex: none; }
 .plan-row.now .time { color: var(--color-accent-300); }
 .plan-row .len { margin-left: auto; color: var(--color-neutral-600); font-size: 12px; }
+.plan-row .lesson-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .plan-row .go { margin-left: auto; color: var(--color-accent); }
 
 .rows { display: flex; flex-direction: column; }
@@ -564,6 +708,136 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
 }
 .pill.ready { border-color: var(--color-accent-700); color: var(--color-accent-300); }
 .pill.behind { border-color: color-mix(in srgb, oklch(0.734 0.12 20) 60%, transparent); color: oklch(0.78 0.1 20); }
+
+/* ── wide dashboard panels ────────────────────────────────────────────── */
+/* Preview and Library carry a rail beside their contents. In a column layout
+   nothing can span two tracks, so instead of widening the panel the rail drops
+   under the thing it lists once the panel itself is narrow. The query is on
+   the panel, not the window, so the same panel reads correctly whether the
+   dashboard is in one column or four. */
+@container (max-width: 400px) {
+  .preview-panel { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── file preview ─────────────────────────────────────────────────────── */
+.preview-panel {
+  display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 14px;
+  padding: 12px; min-height: 252px;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.preview-rail {
+  display: flex; flex-direction: column; gap: 1px; min-width: 0;
+  padding-right: 10px; border-right: 1px solid var(--color-divider);
+}
+.preview-tab {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: calc(6px + var(--density-step)) 8px; border-radius: 7px;
+  border-left: 2px solid transparent;
+  font-size: 12.5px; color: var(--color-neutral-400);
+}
+.preview-tab i { color: var(--role-color, var(--color-accent)); flex: none; }
+.preview-tab .grow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview-tab:hover { background: color-mix(in srgb, var(--color-text) 5%, transparent); color: var(--color-text); }
+.preview-tab.on { background: var(--accent-wash); color: var(--color-text); border-left-color: var(--role-color, var(--color-accent)); }
+
+.preview-pane { display: flex; min-width: 0; }
+.preview-inner { display: flex; flex-direction: column; gap: 11px; width: 100%; min-width: 0; }
+.preview-head { display: flex; align-items: flex-start; gap: 9px; }
+.preview-head .btn { flex: none; }
+.preview-head .preview-kind { color: var(--color-accent); margin-top: 2px; flex: none; }
+.preview-name { font: 500 13.5px/1.35 var(--font-heading); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview-meta { margin-top: 2px; font-size: 11.5px; color: var(--color-neutral-600); }
+.preview-loading { display: flex; align-items: center; gap: 8px; padding: 30px 4px; color: var(--color-neutral-600); font-size: 12.5px; }
+.preview-loading i { animation: spin 0.9s linear infinite; }
+.preview-pane .empty-state { padding: 24px 12px; margin: auto; }
+
+/* A note, read at a glance. The last lines fade rather than stop, because a
+   hard cut at a fixed height reads as a rendering fault rather than as more
+   note below. */
+.doc-preview {
+  display: flex; flex-direction: column; gap: 3px;
+  max-height: 208px; overflow: hidden;
+  font-size: 12.5px; line-height: 1.5; color: var(--color-neutral-300);
+  -webkit-mask-image: linear-gradient(to bottom, #000 76%, transparent);
+  mask-image: linear-gradient(to bottom, #000 76%, transparent);
+}
+.doc-preview .pl { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.doc-preview .pl > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-preview .heading { font: 500 13px/1.4 var(--font-heading); color: var(--color-text); margin-top: 5px; }
+.doc-preview .heading.h1 { font-size: 14.5px; }
+.doc-preview .bullet .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--color-neutral-600); flex: none; }
+.doc-preview .todo i { color: var(--color-neutral-500); flex: none; }
+.doc-preview .todo.done > span { text-decoration: line-through; color: var(--color-neutral-600); }
+.doc-preview .quote { border-left: 2px solid var(--color-neutral-800); padding-left: 8px; color: var(--color-neutral-500); font-style: italic; }
+.doc-preview .code { font: 400 11.5px/1.5 var(--font-mono); color: var(--color-neutral-500); }
+.doc-preview .math, .doc-preview .table, .doc-preview .image, .doc-preview .card { color: var(--color-neutral-500); }
+.doc-preview .more { color: var(--color-neutral-700); letter-spacing: 2px; }
+
+.deck-preview { display: flex; flex-direction: column; gap: 9px; }
+.deck-stats { display: flex; flex-wrap: wrap; gap: 6px; }
+.deck-stats .pill { margin-left: 0; }
+.card-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  padding: calc(6px + var(--density-step)) 0;
+  border-top: 1px solid var(--color-divider); font-size: 12.5px;
+}
+.card-row:last-child { border-bottom: 1px solid var(--color-divider); }
+.card-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-row .back { color: var(--color-neutral-500); }
+
+.pdf-preview { display: flex; flex-direction: column; }
+.quote-row {
+  display: flex; gap: 10px; font-size: 12.5px;
+  padding: calc(7px + var(--density-step)) 0; border-top: 1px solid var(--color-divider);
+}
+.quote-row:last-of-type { border-bottom: 1px solid var(--color-divider); }
+.quote-row .page { flex: none; width: 32px; font: 400 11px/1.6 var(--font-mono); color: var(--color-neutral-600); }
+.quote-row .quote { display: block; padding-left: 9px; border-left: 2px solid var(--color-accent-700); color: var(--color-neutral-300); }
+.quote-row .note-line { display: block; margin-top: 4px; padding-left: 11px; font-size: 11.5px; color: var(--color-neutral-600); }
+
+.canvas-preview {
+  position: relative; height: 204px; overflow: hidden;
+  border: 1px solid var(--color-divider); border-radius: 8px; background: var(--color-bg);
+}
+.canvas-preview.dotted {
+  background-image: radial-gradient(var(--color-neutral-800) 1px, transparent 1px);
+  background-size: 15px 15px;
+}
+.canvas-mini { display: block; width: 100%; height: 100%; }
+.canvas-more { position: absolute; right: 9px; bottom: 7px; font-size: 10.5px; color: var(--color-neutral-600); }
+
+/* ── library corner ───────────────────────────────────────────────────── */
+.library-panel {
+  display: flex; flex-direction: column; gap: 10px; padding: 12px;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.library-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.library-chips .chip { max-width: 170px; }
+.library-chips .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-crumb { display: flex; align-items: center; gap: 8px; font-size: 11.5px; }
+.library-panel .row { padding: calc(6px + var(--density-step)) 0; font-size: 12.5px; }
+.library-panel .row i { color: var(--role-color, var(--color-neutral-500)); flex: none; }
+.library-panel .row .grow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-panel .row:hover { color: var(--color-text); }
+.library-panel .empty-state { padding: 22px 12px; }
+.library-foot { display: flex; align-items: center; gap: 10px; font-size: 11.5px; }
+.library-foot .home-link { margin-left: auto; }
+/* A way through that is a word, not a button: the panel already has enough
+   boxes in it. */
+.home-link { display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent-500); font-size: 11.5px; }
+.home-link:hover { text-decoration: underline; }
+
+@media (max-width: 720px) {
+  .preview-panel { grid-template-columns: minmax(0, 1fr); }
+  .preview-rail {
+    flex-direction: row; overflow-x: auto; padding: 0 0 8px;
+    border-right: 0; border-bottom: 1px solid var(--color-divider);
+  }
+  .preview-tab { flex: none; max-width: 148px; }
+  .card-row { grid-template-columns: 1fr; gap: 3px; }
+}
 
 /* ── focus timer ──────────────────────────────────────────────────────── */
 .timer {
@@ -655,11 +929,45 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
   background: color-mix(in srgb, var(--color-accent) 6%, transparent);
   box-shadow: 0 0 26px color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
+/* The theme-family thumbnail. It paints a family other than the one on screen,
+   so everything inside it is coloured inline from settings.js rather than from
+   the tokens — this rule only gives it its box. */
+.family-preview {
+  height: 74px; padding: 9px; border: 1px solid; border-radius: var(--radius-md);
+  display: flex; align-items: flex-start; overflow: hidden;
+}
+.family-preview > div { width: 100%; }
 .option-card .name { margin-top: 11px; display: flex; align-items: center; gap: 8px; font: 500 12.5px/1 var(--font-heading); }
 .option-card .desc { margin-top: 7px; color: var(--color-neutral-500); font-size: 11.5px; line-height: 1.5; }
 .radio-dot { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 1px solid var(--color-neutral-700); display: grid; place-items: center; }
 .option-card.on .radio-dot { border-color: var(--color-accent); }
 .option-card.on .radio-dot::after { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--color-accent); }
+
+/* The background-sound picker on Focus settings. Seven small cards that play
+   what they name when pressed — the hint under the label is there to be read
+   before the press, not instead of it. They wrap rather than scroll, because a
+   list of seven that scrolls hides the last two on a narrow window. */
+.sound-grid, .sfx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(146px, 1fr)); gap: 8px; }
+.sound-card, .sfx-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  padding: 11px 12px 12px;
+  text-align: left;
+  border: 1px solid var(--color-neutral-800);
+  border-radius: var(--radius-md);
+  color: var(--color-neutral-500);
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+.sound-card:hover, .sfx-card:hover { border-color: var(--color-neutral-700); color: var(--color-text); }
+.sound-card i, .sfx-card i { font-size: 19px; line-height: 1; }
+.sound-card .label, .sfx-card .label { font: 500 12.5px/1 var(--font-heading); color: var(--color-text); }
+.sfx-card i { font-size: 13px; color: var(--color-neutral-600); }
+.sound-card .hint, .sfx-card .hint { font-size: 11px; line-height: 1.45; color: var(--color-neutral-600); }
+.sound-card.on {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  color: var(--color-accent);
+}
+.sound-card.on .label { color: var(--color-accent); }
 
 .rule { height: 1px; background: linear-gradient(90deg, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent); }
 
@@ -1143,14 +1451,21 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
 .progress { flex: 1; height: 3px; border-radius: 4px; background: var(--color-neutral-900); margin: 0 8px; }
 .progress > div { height: 3px; border-radius: 4px; background: var(--color-accent); transition: width 0.2s ease; }
 
-.study-body { flex: 1; display: flex; justify-content: center; min-height: 0; }
+/* The card sits centred with the height its own content asks for, rather than
+   filling the pane. A full-bleed card made studying feel like leaving Studex;
+   `margin-block: auto` centres it without clipping the top when a long card
+   does need to scroll — which `align-items: center` would. */
+.study-body { flex: 1; display: flex; justify-content: center; min-height: 0; overflow-y: auto; }
 .card-face {
   width: min(760px, 100%);
+  margin-block: auto;
   display: flex; flex-direction: column; gap: 12px;
   min-height: 0;
 }
 .card-surface {
-  flex: 1;
+  flex: 0 1 auto;
+  min-height: 210px;
+  max-height: min(56vh, 540px);
   border: 1px solid var(--color-accent-700);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
@@ -1160,6 +1475,38 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
   overflow-y: auto;
 }
 .card-surface.hidden-answer { border-color: var(--color-neutral-800); box-shadow: none; }
+/* Marked. The border and the glow carry it, so how it went reads from across
+   the room before a word of the answer has been read. */
+.card-surface.right {
+  border-color: color-mix(in srgb, var(--color-accent) 65%, transparent);
+  box-shadow: 0 0 48px color-mix(in srgb, var(--color-accent) 20%, transparent);
+  animation: verdict-in 0.28s var(--ease-out);
+}
+.card-surface.wrong {
+  border-color: color-mix(in srgb, var(--color-danger) 62%, transparent);
+  box-shadow: 0 0 48px color-mix(in srgb, var(--color-danger) 16%, transparent);
+  animation: verdict-shake 0.34s var(--ease-out);
+}
+.card-surface.right .a { border-top-color: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+.card-surface.wrong .a { border-top-color: color-mix(in srgb, var(--color-danger) 30%, transparent); }
+.card-surface .a .verdict {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 10px;
+  font: 500 13px/1 var(--font-body); letter-spacing: 0.01em;
+}
+.card-surface.right .a .verdict { color: var(--color-accent-300); }
+.card-surface.wrong .a .verdict { color: var(--color-danger); }
+@keyframes verdict-in { from { transform: scale(0.985); } to { transform: scale(1); } }
+@keyframes verdict-shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  55% { transform: translateX(4px); }
+  80% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-surface.right, .card-surface.wrong { animation: none; }
+}
 .card-surface .topic { font: 400 10px/1 var(--font-mono); letter-spacing: 0.12em; color: var(--color-accent); text-transform: uppercase; }
 .card-surface .q { margin-top: 20px; font: 500 24px/1.3 var(--font-cards); letter-spacing: -0.02em; max-width: 22em; white-space: pre-wrap; }
 .card-surface .a {
@@ -1227,7 +1574,7 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
 .learn-recall .key, .study .btn .key { font: 400 10.5px/1 var(--font-mono); padding: 2px 6px; margin-left: 6px; border: 1px solid currentColor; border-radius: var(--radius-sm); opacity: 0.6; }
 .learn-verdict { margin-bottom: 10px; }
 .learn-verdict.right { color: var(--color-accent-300); }
-.learn-verdict.wrong { color: oklch(0.78 0.12 25); }
+.learn-verdict.wrong { color: var(--color-danger); }
 
 .answer-input {
   display: flex; align-items: center; gap: 10px;
@@ -1255,6 +1602,8 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
 .mock-recent { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
 .mock-score { text-align: center; padding: 8px 0 4px; }
 .mock-score-pct { font: 500 40px/1 var(--font-heading); color: var(--color-accent-300); font-variant-numeric: tabular-nums; }
+/* The sign sits a size down, so a counting figure does not drag it about. */
+.mock-score-pct .sign { font-size: 0.6em; margin-left: 2px; color: var(--color-neutral-500); }
 .mock-breakdown { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 8px; }
 .mock-topic-row {
   display: flex; align-items: center; gap: 12px;
@@ -1357,6 +1706,47 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
 .obj.card .kicker { font: 400 9.5px/1 var(--font-mono); letter-spacing: 0.12em; color: var(--color-accent); }
 .obj.card .front { margin-top: 9px; font: 500 13px/1.4 var(--font-heading); }
 .obj.card .back { margin-top: 7px; color: var(--color-neutral-400); font-size: 12px; line-height: 1.5; }
+/* A file from the library, standing on the plane. It is drawn as a card and
+   not as a note on purpose: a note is something you wrote, and this is a way
+   back to something that already exists, so it says what kind of thing it is
+   and carries the arrow that opens it. */
+.obj.link {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 11px 13px;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.obj.link .kicker {
+  display: flex; align-items: center; gap: 5px;
+  font: 400 9.5px/1 var(--font-mono); letter-spacing: 0.12em;
+  color: var(--color-neutral-500);
+}
+.obj.link .kicker i { font-size: 12px; }
+.obj.link .link-title {
+  font: 500 13.5px/1.35 var(--font-heading); letter-spacing: -0.012em;
+  color: var(--color-text);
+  /* Two lines, then an ellipsis: a long title must not push the arrow out of
+     a card whose height the person set by dragging it. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.obj.link .link-open {
+  position: absolute; top: 7px; right: 7px;
+  display: flex; align-items: center; justify-content: center;
+  width: 21px; height: 21px; border-radius: var(--radius-sm);
+  color: var(--color-neutral-500);
+  opacity: 0; transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
+}
+.obj.link:hover .link-open, .obj.link .link-open:focus-visible { opacity: 1; }
+.obj.link .link-open:hover { background: var(--accent-wash); color: var(--color-accent); }
+/* The file behind it has been deleted. The card stays, because it still says
+   what used to be here, but it stops pretending to be a way there. */
+.obj.link.missing { border-style: dashed; }
+.obj.link.missing .kicker { color: var(--color-danger); }
+.obj.link.missing .link-title { color: var(--color-neutral-500); text-decoration: line-through; }
+
 /* Editing happens inside the object, so the object wears the ring: a second
    rectangle drawn around the text inside a note that is already outlined is
    noise, and a note being typed into with no ring at all is invisible. */
@@ -1712,7 +2102,29 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
   display: flex; flex-direction: column; gap: calc(3px + var(--density-step) / 2);
   color: var(--color-neutral-400);
 }
+/* The jump row is pinned above the scroller rather than inside it, so it is
+   still there after a long page has been scrolled — the whole point of it is
+   that it is in the same place on every section. */
+.settings-main { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.settings-jump {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 12px 34px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.settings-jump .lead {
+  font: 500 11px/1 var(--font-body); letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--color-neutral-600); margin-right: 3px;
+}
+.settings-jump .chip { gap: 6px; }
+@media (max-width: 760px) { .settings-jump { padding-left: 20px; padding-right: 20px; } }
+
 .settings-body { flex: 1; padding: calc(28px + var(--density-step) * 2) 34px; display: flex; flex-direction: column; gap: calc(26px + var(--density-step) * 2); min-width: 0; overflow-y: auto; }
+/* One column, always. Settings read top to bottom; two columns turned every
+   page into a zig-zag and put half the controls off the side of a narrow
+   window. The measure is capped instead, so a wide window gives margins
+   rather than a line of text nobody can track back to its start. */
+.settings-body > * { max-width: 760px; width: 100%; }
+.settings-stack { display: flex; flex-direction: column; gap: 34px; }
 .plan-card {
   margin-top: auto;
   padding: 12px;
@@ -2599,12 +3011,62 @@ code {
 }
 /* A highlight is a wash rather than a block of colour: it has to survive being
    read over, which a saturated ground behind body text does not. */
-.em-h { border-radius: 3px; padding: 0.05em 0.1em; color: var(--color-text); }
-.hl-amber  { background: color-mix(in srgb, #d6b36a 30%, transparent); }
-.hl-lime   { background: color-mix(in srgb, #8fb07a 30%, transparent); }
-.hl-sky    { background: color-mix(in srgb, #7fa3c6 30%, transparent); }
-.hl-rose   { background: color-mix(in srgb, #c98a93 30%, transparent); }
-.hl-violet { background: color-mix(in srgb, #a197c8 30%, transparent); }
+.em-h {
+  border-radius: 3px; padding: 0.05em 0.1em; color: var(--color-text);
+  background: color-mix(in srgb, var(--hl, #d6b36a) 30%, transparent);
+}
+/* Each colour names one value and nothing else, so the swatch that offers it
+   and the mark that uses it cannot drift apart. */
+.hl-amber  { --hl: #d6b36a; }
+.hl-lime   { --hl: #8fb07a; }
+.hl-sky    { --hl: #7fa3c6; }
+.hl-rose   { --hl: #c98a93; }
+.hl-violet { --hl: #a197c8; }
+
+/* Colour written into the words rather than behind them.
+
+   One hue family with the lightness set by the theme, not six pairs of hex
+   values: a colour that was legible on the dark ground has to move when the
+   page turns white, and moving one number is the only way six of them stay in
+   step. The chroma is deliberately short of full — these are for marking a
+   definition or an exception in a page of notes, and writing that shouts is
+   writing nobody reads twice. `grey` is the same ramp with the colour taken
+   out, which is what "this matters less" looks like.
+
+   Inherited on purpose: a bold word inside a coloured phrase should be that
+   colour and bold, so nothing here sets a weight or a ground. */
+.em-k { color: oklch(var(--ink-l, 0.8) var(--ink-c, 0.115) var(--ink-h, 0)); }
+.tx-amber  { --ink-h: 80; }
+.tx-lime   { --ink-h: 140; }
+.tx-sky    { --ink-h: 240; }
+.tx-rose   { --ink-h: 20; }
+.tx-violet { --ink-h: 289; }
+.tx-grey   { --ink-c: 0; --ink-l: 0.66; }
+/* On a pale page the same hues have to come down to hold their contrast. */
+:root[data-theme='light'] .em-k, :root[data-theme='light'] .sw-ink { --ink-l: 0.5; --ink-c: 0.14; }
+:root[data-theme='light'] .tx-grey { --ink-c: 0; --ink-l: 0.55; }
+/* Increase Contrast: the hue stays, the distance from the ground grows. */
+:root[data-contrast='high'] .em-k, :root[data-contrast='high'] .sw-ink { --ink-l: 0.87; --ink-c: 0.16; }
+:root[data-contrast='high'][data-theme='light'] .em-k, :root[data-contrast='high'][data-theme='light'] .sw-ink { --ink-l: 0.4; --ink-c: 0.18; }
+/* When the system takes the palette over, a colour it did not choose is worse
+   than none: the word goes back to being ordinary text. */
+@media (forced-colors: active) {
+  .em-k { color: CanvasText; forced-color-adjust: none; }
+}
+
+/* The swatches that choose one. A swatch shows the colour it will write in, so
+   it reuses the same `.tx-*` classes and inherits every theme and contrast
+   override above rather than repeating six values that would then drift.
+   A highlight swatch shows its wash over the menu's own ground, not over the
+   page's, so it is painted rather than mixed with transparent. */
+.swatch.sw-ink { background: oklch(var(--ink-l, 0.8) var(--ink-c, 0.115) var(--ink-h, 0)); }
+.swatch.sw-hl { background: color-mix(in srgb, var(--hl) 62%, var(--color-surface)); }
+/* A colour is a colour; when the system owns the palette it can only be a
+   label, so the swatches become outlined boxes that the names beside them
+   (the button's own accessible name) do the work for. */
+@media (forced-colors: active) {
+  .swatch { border: 1px solid CanvasText; }
+}
 /* A blank is drawn as the gap it will be, not as the words it hides — the
    point is to be able to see, while writing, what the card will ask. */
 .em-z {
@@ -2993,6 +3455,124 @@ code {
    with a theme of its own. */
 .math-output .katex { color: inherit; }
 .math-output .katex-display { margin: 0; }
+
+/* The keys under an equation, for the notation whose name you know and whose
+   LaTeX you do not. Only on screen while the equation is being written: a page
+   being read has no use for a keyboard. */
+.math-keys {
+  display: none; flex-wrap: wrap; gap: 4px; padding: 2px 0 0;
+}
+.math-block:focus-within .math-keys { display: flex; }
+.math-key {
+  min-width: 27px; height: 25px; padding: 0 6px;
+  border: 1px solid var(--color-neutral-800); border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-neutral-300);
+  font: 400 13px/1 var(--font-body); cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.math-key:hover {
+  background: var(--color-accent-900); border-color: var(--color-accent-700);
+  color: var(--color-neutral-100);
+}
+
+/* ── code ──────────────────────────────────────────────────────────────────
+   A code block is a quotation from another language, so it gets its own
+   ground and its own face and otherwise stays out of the way: no border, no
+   line numbers, and a toolbar that is legible but dim until you go near it.
+
+   The colours live in tokens because a code block is read in both themes and
+   in all three families, and a hard-coded green that works on the warm dark
+   ground is unreadable on the light one. */
+:root {
+  --tok-com: var(--color-neutral-600);
+  --tok-str: #9ab87f;
+  --tok-num: #d5a976;
+  --tok-key: #ab9bd2;
+  --tok-lit: #dc9d8c;
+  --tok-typ: #82b3b0;
+  --tok-fun: #e2cb84;
+  --tok-att: #82b3b0;
+  --tok-tag: #ab9bd2;
+}
+:root[data-theme='light'] {
+  --tok-com: var(--color-neutral-600);
+  --tok-str: #45702f;
+  --tok-num: #8c5214;
+  --tok-key: #63479b;
+  --tok-lit: #9c3f2b;
+  --tok-typ: #266764;
+  --tok-fun: #6f5309;
+  --tok-att: #266764;
+  --tok-tag: #63479b;
+}
+.code-block {
+  flex: 1; min-width: 0;
+  border-radius: var(--radius-md); background: var(--color-surface);
+  overflow: hidden;
+}
+.code-bar {
+  display: flex; align-items: center; gap: 6px; padding: 7px 8px 0 10px;
+  opacity: 0.45; transition: opacity 120ms ease;
+}
+.code-block:hover .code-bar, .code-block:focus-within .code-bar { opacity: 1; }
+.code-bar .spacer { flex: 1; }
+/* A shared link cannot change the language, so it gets the label the picker
+   would have shown and nothing to press. */
+.code-lang-static {
+  color: var(--color-neutral-500);
+  font: 500 10.5px/1 var(--font-mono, ui-monospace, Menlo, monospace);
+  letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 6px;
+}
+/* The language reads as a caption until you go to change it, at which point it
+   is a control; one element doing both keeps a label and a picker from sitting
+   side by side saying the same word. */
+.code-lang {
+  flex: none; gap: 3px;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  background: transparent; color: var(--color-neutral-500);
+  font: 500 10.5px/1 var(--font-mono, ui-monospace, Menlo, monospace);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 5px 5px 5px 6px;
+}
+.code-lang .sel-label { flex: none; }
+.code-lang .sel-caret { font-size: 10px; }
+.code-lang:hover { border-color: var(--color-neutral-800); color: var(--color-neutral-300); }
+.code-lang[aria-expanded='true'] { border-color: var(--color-accent); color: var(--color-neutral-200); }
+.code-act {
+  display: grid; place-items: center; width: 24px; height: 24px;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  background: transparent; color: var(--color-neutral-500); cursor: pointer;
+}
+.code-act:hover { border-color: var(--color-neutral-800); color: var(--color-neutral-200); }
+.code-source {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; word-break: break-word;
+  tab-size: 2; padding: 4px 12px 12px; color: var(--color-neutral-200);
+  outline: none;
+}
+.code-source:empty::before { content: attr(data-placeholder); color: var(--color-neutral-700); }
+.tok-com { color: var(--tok-com); font-style: italic; }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-key { color: var(--tok-key); }
+.tok-lit { color: var(--tok-lit); }
+.tok-typ { color: var(--tok-typ); }
+.tok-fun { color: var(--tok-fun); }
+.tok-att { color: var(--tok-att); }
+.tok-tag { color: var(--tok-tag); }
+
+/* An equation typeset inside a line of prose. It is an island the caret never
+   enters: the editor swaps the line back to its own text before focusing it. */
+.em-math {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.em-math .katex { color: inherit; font-size: 1.04em; }
 
 /* Colour of the student's own choosing. */
 .color-row { display: flex; gap: 9px; align-items: center; }
@@ -3585,6 +4165,28 @@ code {
 .ai-prose { display: flex; flex-direction: column; gap: 10px; }
 .ai-prose p { margin: 0; line-height: 1.65; }
 
+/* An explanation read beside the card it is about, rather than in a window
+   over the sitting. Distinct from the card's own surface — everything inside
+   it was guessed by a model, and that has to be visible without reading the
+   caveat. */
+.ai-explain {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px 16px;
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 40%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--accent-wash);
+  font-size: 13.5px; line-height: 1.6; color: var(--color-neutral-300);
+  font-family: var(--font-body); white-space: normal;
+  animation: explain-in 0.22s var(--ease-out);
+}
+.ai-explain .ai-caveat { padding-top: 10px; }
+@keyframes explain-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ai-explain { animation: none; } }
+
+/* The chip that asks for it. */
+.chip.ai { color: var(--color-accent-300); border-color: color-mix(in srgb, var(--color-accent) 38%, transparent); }
+.chip.ai:hover { border-color: var(--color-accent); background: var(--accent-wash); }
+
 /* Said under every answer, and never omitted. */
 .ai-caveat {
   display: flex; align-items: flex-start; gap: 7px;
@@ -3743,6 +4345,13 @@ code {
 
 @media (max-width: 900px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  /* Two figures per row, and the row gap the band does not need at full width. */
+  .home-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 20px; }
+  /* Two columns means the third figure starts a row, so a left-hand line would
+     fall against the frame. The line comes back only between the pairs. */
+  .home-stats .figure + .figure { border-left: 0; padding-left: 0; }
+  .home-stats .figure:nth-child(even) { border-left: 1px solid var(--color-divider); padding-left: 22px; }
+  .home-head .page-title { font-size: 23px; }
   .two-col { grid-template-columns: 1fr; gap: 22px; }
   .file-grid.tight { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   .plan-grid { grid-template-columns: minmax(0, 1fr); }
@@ -3775,6 +4384,11 @@ code {
   .doc-scroll { padding-left: 16px; padding-right: 16px; }
   .tab { flex-basis: 130px; min-width: 76px; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .home-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 20px; }
+  /* Two columns means the third figure starts a row, so a left-hand line would
+     fall against the frame. The line comes back only between the pairs. */
+  .home-stats .figure + .figure { border-left: 0; padding-left: 0; }
+  .home-stats .figure:nth-child(even) { border-left: 1px solid var(--color-divider); padding-left: 22px; }
   .file-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 }
 
@@ -3987,6 +4601,56 @@ code {
 .ai-msg .body code { font-family: var(--font-mono); font-size: 0.92em; padding: 1px 4px; border-radius: 4px; background: color-mix(in srgb, var(--color-text) 8%, transparent); }
 .ai-msg .body pre { overflow-x: auto; padding: 10px; border-radius: 6px; background: color-mix(in srgb, var(--color-text) 6%, transparent); }
 .ai-msg .body pre code { padding: 0; background: none; white-space: pre; }
+/* An equation in the tutor's answers. The panel is 380px wide and a balanced
+   chemical equation is not, so a display equation scrolls on its own rather
+   than widening the bubble — and gets a little air above and below, since the
+   line it sits between is usually the sentence explaining it. */
+.ai-msg .body .ai-math { margin: 10px 0; overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
+.ai-msg .body .ai-math .katex-display { margin: 0; }
+.ai-msg .body .math-inline { max-width: 100%; overflow-x: auto; vertical-align: middle; }
+
+/* A set of cards the tutor wrote out: one row each, question over answer. */
+.ai-cards { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.ai-card {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border-left: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+.ai-card .q { font-weight: 600; line-height: 1.4; }
+.ai-card .a { color: var(--color-neutral-500); line-height: 1.45; }
+.ai-cards .ai-action { margin: 2px 0 0; }
+
+/* ── something the tutor is offering to make ───────────────────────────────
+   Deliberately not styled as part of the answer. An answer is text; this is a
+   control, and a student has to be able to tell at a glance that pressing it
+   will put something in their library. So it sits on its own surface with the
+   accent along its leading edge, and says what kind of thing it is before it
+   says what it is called. */
+.ai-action {
+  margin: 10px 0; padding: 10px 11px 10px 12px;
+  border: 1px solid var(--color-divider); border-left: 2px solid var(--color-accent);
+  border-radius: var(--radius-md); background: var(--color-surface);
+  display: flex; flex-direction: column; gap: 7px;
+}
+.ai-action .head { display: flex; align-items: flex-start; gap: 8px; }
+.ai-action .head > i { margin-top: 1px; color: var(--color-accent); }
+.ai-action .what { min-width: 0; }
+.ai-action .kind {
+  font: 600 9.5px/1 var(--font-heading); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--color-neutral-500);
+}
+.ai-action .title { margin-top: 3px; font: 500 12.5px/1.35 var(--font-heading); overflow-wrap: anywhere; }
+.ai-action .detail { font-size: 11.5px; line-height: 1.5; color: var(--color-neutral-500); }
+.ai-action .go { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.ai-action .go .note { font-size: 11.5px; color: var(--color-neutral-500); overflow-wrap: anywhere; }
+/* Made. The accent edge goes green, because the question the student has after
+   pressing is only ever "did that work?". */
+.ai-action.done { border-left-color: var(--color-accent-3); }
+.ai-action.done .head > i { color: var(--color-accent-3); }
+.ai-action.failed { border-left-color: var(--color-danger); }
+.ai-action.failed .go .note { color: var(--color-danger); }
 .ai-msg .meta { font-size: 11px; color: var(--color-neutral-600); }
 .ai-msg .copy { align-self: flex-start; }
 .ai-msg.failed .body { color: var(--color-danger); }
@@ -4001,6 +4665,19 @@ code {
 }
 .ai-chat-tag input { margin: 0; }
 .ai-chat-tag button { display: grid; place-items: center; color: var(--color-neutral-500); }
+/* An attached file is a choice the person made, not a box that happened to be
+   ticked, so it is drawn in the accent and reads before the page checkbox. */
+.ai-chat-tag.file {
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-divider));
+  background: var(--accent-wash);
+  color: var(--color-text);
+}
+.ai-chat-tag.file i { color: var(--color-accent); }
+/* A file is being dragged over the panel. The whole panel lights, because the
+   whole panel is the target. */
+.ai-chat.drop-on { outline: 2px dashed var(--color-accent); outline-offset: -6px; }
+.ai-chat.drop-on .ai-chat-log { background: var(--accent-wash); }
+.ai-chat-empty p.muted { font-size: 11.5px; }
 .ai-chat-row { display: flex; gap: 8px; align-items: flex-end; }
 .ai-chat-row textarea.input { resize: none; line-height: 1.45; max-height: 180px; }
 .ai-chat-send { flex: none; height: 36px; width: 38px; padding: 0; }
@@ -4010,6 +4687,17 @@ code {
   .ai-chat { box-shadow: var(--shadow-lg); }
 }
 @media (max-width: 560px) { .ai-chat { width: 100vw; border-left: 0; } }
+
+/* ── celebration ──────────────────────────────────────────────────────── */
+/* The confetti canvas sits over everything, including the streak veil, and is
+   never in the way: it takes no pointer events and removes itself once the last
+   piece has fallen. z-index is one above the veil so paper falls in front of it
+   when a sitting ends on a day the streak also moved. */
+.confetti-layer {
+  position: fixed; inset: 0; z-index: 261;
+  pointer-events: none;
+  width: 100%; height: 100%;
+}
 
 /* ── streaks ──────────────────────────────────────────────────────────── */
 .streak-burst {
@@ -4387,6 +5075,10 @@ kbd {
 .focus-top { display: flex; align-items: center; width: 100%; }
 .focus-eyebrow { font: 500 11px/1 var(--font-mono); letter-spacing: .12em; color: var(--color-neutral-500); }
 .focus-icon { margin-left: auto; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--color-neutral-500); }
+/* The first icon in a row takes the free space; any after it sit beside it
+   rather than splitting the gap between them. */
+.focus-foot .focus-icon ~ .focus-icon { margin-left: 2px; }
+.focus-icon.on { color: var(--color-accent-300); }
 .focus-icon:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); color: var(--color-text); }
 .focus-dial { position: relative; width: 280px; max-width: 100%; aspect-ratio: 1; }
 .focus-dial .focus-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -4404,10 +5096,6 @@ kbd {
 .focus-chip { padding: 6px 12px; border-radius: 999px; font-size: 12.5px; border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text); }
 .focus-chip:hover { border-color: var(--color-accent-400); }
 .focus-chip.on { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
-.focus-stepper { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-neutral-500); padding: 4px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent); }
-.focus-stepper b { color: var(--color-text); font-weight: 500; min-width: 26px; text-align: center; font-variant-numeric: tabular-nums; }
-.focus-stepper button { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: var(--color-neutral-500); }
-.focus-stepper button:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); color: var(--color-text); }
 .focus-goal { font: inherit; font-size: 13.5px; width: min(420px, 100%); padding: 8px 14px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent); background: transparent; color: var(--color-text); text-align: center; }
 .focus-goal:focus-visible { outline: 2px solid var(--color-accent, currentColor); outline-offset: 2px; }
 .focus-goal-line { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; opacity: .8; max-width: 420px; text-align: center; }
@@ -4418,11 +5106,14 @@ kbd {
 .focus-btn:active { transform: scale(.96); }
 .focus-btn.primary { background: var(--color-accent); color: #fff; box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--color-accent) 70%, transparent); }
 .focus-btn.primary:hover { background: var(--color-accent-600); }
-.focus-look { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 14px; width: 100%; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); font-size: 12.5px; }
-.focus-look input[type=range] { width: 100%; accent-color: var(--color-accent); }
-.focus-toggle { display: inline-flex; align-items: center; gap: 7px; color: var(--color-neutral-500); }
-.focus-toggle input { accent-color: var(--color-accent); }
-.focus-look > .focus-toggle:nth-last-child(-n+2) { grid-column: span 1; }
+/* The foot of the panel: what this session is set to, and the way to change
+   it. The settings themselves are in Settings › Focus — the overlay used to
+   carry all of them, which made a timer look like a control panel. */
+.focus-foot {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
 .focus-hint { font-size: 11px; color: var(--color-neutral-500); }
 .focus-pill {
   position: fixed; right: 18px; bottom: 18px; z-index: 850;
@@ -4524,6 +5215,102 @@ body.focus-hide-sidebar .sidebar, body.focus-hide-sidebar .rail, body.focus-hide
 .state-tag.new { color: var(--color-accent-3); }
 .tt-day.today .date, .row.soon .date { color: color-mix(in oklab, var(--color-accent-3) 70%, var(--color-text)); }
 
+/* ── settings, in groups ──────────────────────────────────────────────────
+   Fifteen rows in one column read as a pile; five short groups read as a
+   filing system. The heading is quiet — it is a signpost, not a section. */
+.settings-group { display: flex; flex-direction: column; gap: calc(2px + var(--density-step) / 2); }
+.settings-group + .settings-group { margin-top: 14px; }
+.settings-group-label {
+  font: 600 10px/1.2 var(--font-heading); letter-spacing: 0.09em;
+  color: var(--color-neutral-600); padding: 0 8px 5px;
+}
+
+/* A settings screen's own surface: the frosted panel everything sits on, so
+   one screen's controls read as one set rather than as loose rows. */
+.glass-card {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-text) 2.5%, transparent);
+}
+.glass-card .setting-row:last-child { border-bottom: none; }
+:root:not([data-glass='off']) .glass-card {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-rim), var(--shadow-sm);
+}
+.arrange-list { display: flex; flex-direction: column; gap: 7px; max-width: 460px; }
+
+/* Help: two ways in, each the size of the decision it is. */
+.help-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.help-card {
+  display: flex; align-items: center; gap: 13px; text-align: left; width: 100%;
+  padding: 16px 18px; border: 1px solid var(--color-divider); border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-text) 3%, transparent); color: var(--color-text); cursor: pointer;
+}
+.help-card > i:first-child { font-size: 22px; color: var(--color-accent); flex: none; }
+.help-card .name { font: 600 13px/1.3 var(--font-heading); }
+.help-card .desc { font-size: 11.5px; color: var(--color-neutral-500); margin-top: 3px; line-height: 1.5; }
+.help-card .help-go { margin-left: auto; color: var(--color-neutral-600); font-size: 14px; flex: none; }
+.help-card:hover { border-color: var(--color-accent); }
+.help-card:hover .help-go { color: var(--color-accent); }
+:root:not([data-glass='off']) .help-card {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-rim), var(--shadow-sm);
+}
+
+/* ── sending something to the developers ──────────────────────────────────
+   Two kinds, one note, then GitHub. The picker is the whole first decision,
+   so it is the largest thing in the sheet. */
+.feedback-sheet { display: flex; flex-direction: column; gap: 14px; min-width: 380px; }
+.feedback-kinds { display: flex; flex-direction: column; gap: 7px; }
+.feedback-kind {
+  display: flex; align-items: center; gap: 11px; text-align: left; width: 100%;
+  padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+  color: var(--color-text); cursor: pointer;
+}
+.feedback-kind i { font-size: 18px; color: var(--color-neutral-500); }
+.feedback-kind:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.feedback-kind.on { border-color: var(--color-accent); background: var(--accent-wash-soft); }
+.feedback-kind.on i { color: var(--color-accent-300); }
+.feedback-kind-label { font: 600 12.5px/1.3 var(--font-heading); }
+.feedback-kind .dim { font-size: 11.5px; margin-top: 2px; }
+.feedback-note { display: flex; gap: 8px; align-items: flex-start; font-size: 11.5px; line-height: 1.45; }
+.feedback-note i { margin-top: 1px; }
+:root:not([data-glass='off']) .feedback-kind {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-rim);
+}
+:root:not([data-glass='off']) .feedback-kind.on {
+  background: color-mix(in srgb, var(--color-accent) 18%, var(--glass-tint));
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--glass-edge));
+}
+
+/* ── earlier versions of a file ───────────────────────────────────────────
+   A file is one file everywhere, so this list is the only place the version
+   that a sync replaced is visible. Kept plain: when, why, how big, put back. */
+.version-sheet { min-width: 340px; }
+.version-list { display: flex; flex-direction: column; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.version-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 9px 11px; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+.version-when { font: 600 12.5px/1.3 var(--font-heading); color: var(--color-text); }
+.version-why { font-size: 11.5px; margin-top: 2px; }
+:root:not([data-glass='off']) .version-row {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-rim);
+}
+
 /* ── liquid glass ──────────────────────────────────────────────────────────
    Floating surfaces are frosted panes over whatever is behind them: a
    translucent tint, a strong blur with extra saturation, a bright hairline
@@ -4538,15 +5325,82 @@ body.focus-hide-sidebar .sidebar, body.focus-hide-sidebar .rail, body.focus-hide
   --glass-blur: blur(26px) saturate(1.7);
 }
 :root[data-theme='light'] {
-  --glass-tint: color-mix(in srgb, #fff 62%, transparent);
-  --glass-tint-strong: color-mix(in srgb, #fff 76%, transparent);
+  --glass-tint: color-mix(in srgb, var(--color-surface) 62%, transparent);
+  --glass-tint-strong: color-mix(in srgb, var(--color-surface) 78%, transparent);
   --glass-edge: color-mix(in srgb, #fff 70%, transparent);
   --glass-rim: inset 0 1px 0 color-mix(in srgb, #fff 90%, transparent), inset 0 0 0 1px color-mix(in srgb, #000 4%, transparent);
 }
+
+/* How much frost each family wears.
+
+   These live here rather than in tokens.css because the tokens they override
+   are declared here, and a file that loads earlier cannot win at equal weight.
+   Both families are therefore written with the attribute spelled out, which
+   puts them above the two blocks immediately overhead — and the high-contrast
+   rules that force these surfaces opaque set `background` directly, so they are
+   untouched by anything here whatever the family.
+
+   Organic barely frosts: paper is not a window, so the pane is nearly solid,
+   the blur is short, and the catch-light along the top edge is warm rather than
+   white. Glass goes the other way — thinner tint, a much deeper blur with the
+   saturation pushed so colour blooms through it, and a bright rim on both the
+   top edge and the whole outline, which is what makes Apple's panes read as a
+   sheet of something rather than a rectangle of fog. */
+:root[data-theme-family='organic'] {
+  --glass-tint: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  --glass-tint-strong: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  --glass-edge: color-mix(in srgb, #ffeccd 12%, transparent);
+  --glass-rim: inset 0 1px 0 color-mix(in srgb, #fff5e2 12%, transparent);
+  --glass-blur: blur(14px) saturate(1.15);
+}
+:root[data-theme-family='organic'][data-theme='light'] {
+  --glass-tint: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  --glass-tint-strong: color-mix(in srgb, var(--color-surface) 93%, transparent);
+  --glass-edge: color-mix(in srgb, #8c7a5c 18%, transparent);
+  --glass-rim: inset 0 1px 0 color-mix(in srgb, #fff 80%, transparent);
+}
+:root[data-theme-family='glass'] {
+  --glass-tint: color-mix(in srgb, var(--color-surface) 52%, transparent);
+  --glass-tint-strong: color-mix(in srgb, var(--color-surface) 66%, transparent);
+  --glass-edge: color-mix(in srgb, #fff 22%, transparent);
+  --glass-rim:
+    inset 0 1px 0 color-mix(in srgb, #fff 30%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 9%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, #000 16%, transparent);
+  --glass-blur: blur(40px) saturate(2);
+}
+:root[data-theme-family='glass'][data-theme='light'] {
+  --glass-tint: color-mix(in srgb, var(--color-surface) 48%, transparent);
+  --glass-tint-strong: color-mix(in srgb, var(--color-surface) 64%, transparent);
+  --glass-edge: color-mix(in srgb, #fff 85%, transparent);
+  --glass-rim:
+    inset 0 1px 0 color-mix(in srgb, #fff 95%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 55%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, #2b3040 8%, transparent);
+}
+
 :root:not([data-glass='off']) .app {
   background:
     radial-gradient(60vw 50vh at 0% 0%, color-mix(in srgb, var(--color-accent) 9%, transparent), transparent 70%),
     radial-gradient(50vw 50vh at 100% 100%, color-mix(in srgb, var(--color-accent-2) 7%, transparent), transparent 70%),
+    var(--color-bg);
+}
+
+/* The window's own wash. The default family keeps the faint pair of accent
+   clouds set just above; the glass family deepens them, because a frosted pane with
+   nothing behind it to refract is just a grey rectangle — the blur needs
+   something to find. Organic drops them entirely and lays down a very slight
+   warm gradient instead, so the app reads as one continuous sheet of paper. */
+:root[data-theme-family='glass']:not([data-glass='off']) .app {
+  background:
+    radial-gradient(70vw 60vh at 8% -6%, color-mix(in srgb, var(--color-accent) 20%, transparent), transparent 66%),
+    radial-gradient(58vw 56vh at 104% 108%, color-mix(in srgb, var(--color-accent-2) 16%, transparent), transparent 66%),
+    radial-gradient(44vw 40vh at 96% 4%, color-mix(in srgb, var(--color-accent-3) 11%, transparent), transparent 70%),
+    var(--color-bg);
+}
+:root[data-theme-family='organic'] .app {
+  background:
+    linear-gradient(176deg, color-mix(in srgb, var(--color-accent-3) 5%, transparent), transparent 42%),
     var(--color-bg);
 }
 :root:not([data-glass='off']) .sidebar,
@@ -4576,6 +5430,729 @@ body.focus-hide-sidebar .sidebar, body.focus-hide-sidebar .rail, body.focus-hide
   box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 12%, transparent);
 }
 :root:not([data-glass='off']) .seg { box-shadow: var(--glass-rim); }
+
+/* The surfaces a student actually spends the day on. Each one was a flat fill
+   on the ground; frosted, the ground's accent wash comes through them and the
+   app reads as one material rather than as tiles laid on a colour. Everything
+   here degrades to its own flat fill when glass is off. */
+:root:not([data-glass='off']) .file-card,
+:root:not([data-glass='off']) .arrange-row,
+:root:not([data-glass='off']) .plan-row,
+:root:not([data-glass='off']) .preview-panel,
+:root:not([data-glass='off']) .library-panel,
+:root:not([data-glass='off']) .plan-tier {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-rim);
+}
+/* A surface whose fill is the accent keeps it — the accent is what it is for.
+   It takes the blur and the rim only, so it is made of the same material. */
+:root:not([data-glass='off']) .card-block,
+:root:not([data-glass='off']) .plan-card {
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-rim);
+}
+/* The header boxes and the preview are the only surfaces Home draws, so they
+   are the only ones that take the material. */
+:root:not([data-glass='off']) .home-head,
+:root:not([data-glass='off']) .home-stats,
+:root:not([data-glass='off']) .home-panel[data-panel='preview'] {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-rim);
+}
+/* Home's panels have no pane of their own, so the widget inside one must not
+   float a pane either — it would be a frosted rectangle sitting on the page
+   under a heading with nothing frosted around it. */
+:root:not([data-glass='off']) .home-panel .preview-panel,
+:root:not([data-glass='off']) .home-panel .library-panel {
+  background: none; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
+}
+/* The bar under the top bar reads as part of the chrome, so it frosts with it
+   rather than sitting on the page as an opaque strip. */
+:root:not([data-glass='off']) .subbar {
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+/* A frosted surface is still a surface, so the states that colour it have to
+   be said again at the glass's own weight — otherwise "now", "selected" and
+   "on" all dissolve into the same pane and the list loses its markers. */
+:root:not([data-glass='off']) .plan-row.now {
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--glass-tint));
+}
+:root:not([data-glass='off']) .plan-row:active {
+  background: color-mix(in srgb, var(--color-text) 11%, var(--glass-tint));
+}
+:root:not([data-glass='off']) .plan-tier.on {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent-900) 40%, var(--glass-tint));
+}
+:root:not([data-glass='off']) .file-card.selected {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--glass-tint));
+}
+/* The lift on hover is the card's own shadow plus the rim that makes it glass. */
+:root:not([data-glass='off']) .file-card:hover,
+:root:not([data-glass='off']) .stat:hover {
+  box-shadow: var(--glass-rim), var(--shadow-md);
+}
+:root:not([data-glass='off']) .pill,
+:root:not([data-glass='off']) .chip {
+  -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4);
+}
+
+
+/* ── the glass family's own chrome ─────────────────────────────────────────
+   Everything above tints the *material*. This section changes the *shapes*,
+   because that is what actually makes a window read as Apple's: capsules
+   rather than rounded rectangles, a selected row that is a filled pill rather
+   than a tinted stripe, controls that are lozenges of the same frosted stuff
+   as the panes behind them, and chrome that has no borders at all — only
+   hairlines of light where two materials meet.
+
+   Two prefixes are used deliberately. Shape rules carry the family alone, so a
+   student who turns glass off for battery still gets the Apple silhouette.
+   Material rules carry `:not([data-glass='off'])` as well, so the frost goes
+   and the shapes stay. Both spell the family inside `:where()`, which keeps
+   them level with the default glass rules overhead — they win on document
+   order, and the high-contrast block at the foot of this file wins over both
+   the same way. */
+
+:root:where([data-theme-family='glass']) {
+  /* The family's own fills. A frosted control is not a colour, it is white
+     light held at a low percentage over whatever is behind it — which is why
+     these are #fff mixes rather than surface mixes, and why the light theme
+     needs its own set rather than an inversion. */
+  --g-fill: color-mix(in srgb, #fff 9%, transparent);
+  --g-fill-hover: color-mix(in srgb, #fff 15%, transparent);
+  --g-line: color-mix(in srgb, #fff 13%, transparent);
+  --g-hair: color-mix(in srgb, #fff 8%, transparent);
+  --g-lift: 0 1px 2px rgba(0, 0, 0, 0.34), 0 8px 22px rgba(0, 0, 0, 0.26);
+  --g-control-blur: blur(20px) saturate(1.8);
+}
+:root:where([data-theme-family='glass'][data-theme='light']) {
+  --g-fill: color-mix(in srgb, #fff 70%, transparent);
+  --g-fill-hover: color-mix(in srgb, #fff 92%, transparent);
+  --g-line: color-mix(in srgb, #0c1020 11%, transparent);
+  --g-hair: color-mix(in srgb, #0c1020 8%, transparent);
+  --g-lift: 0 1px 2px rgba(18, 22, 40, 0.10), 0 8px 22px rgba(18, 22, 40, 0.13);
+}
+
+/* ── shapes ─────────────────────────────────────────────────────────────── */
+
+/* Anything short and pressable becomes a capsule. This is the single loudest
+   difference between this family and the default one. */
+:root:where([data-theme-family='glass']) .btn,
+:root:where([data-theme-family='glass']) .chip,
+:root:where([data-theme-family='glass']) .pill,
+:root:where([data-theme-family='glass']) .seg,
+:root:where([data-theme-family='glass']) .seg button,
+:root:where([data-theme-family='glass']) .side-search,
+:root:where([data-theme-family='glass']) .menu-search,
+:root:where([data-theme-family='glass']) .tabs-add,
+:root:where([data-theme-family='glass']) .crumb-back,
+:root:where([data-theme-family='glass']) .toast-action {
+  border-radius: var(--radius-pill);
+}
+:root:where([data-theme-family='glass']) .btn {
+  padding: calc(6px + var(--density-step)) 13px;
+  font-weight: 500;
+  letter-spacing: -0.003em;
+}
+:root:where([data-theme-family='glass']) .btn.lg { padding: 9px 18px; }
+:root:where([data-theme-family='glass']) .btn.icon { padding: calc(6px + var(--density-step)) 0; }
+
+/* Rows in the sidebar and in menus. Apple's are softly rounded rectangles, not
+   capsules — a full pill on a row as wide as the sidebar reads as a button. */
+:root:where([data-theme-family='glass']) .nav-item,
+:root:where([data-theme-family='glass']) .nav-sub,
+:root:where([data-theme-family='glass']) .tree-folder,
+:root:where([data-theme-family='glass']) .tree-file,
+:root:where([data-theme-family='glass']) .rail-btn,
+:root:where([data-theme-family='glass']) .menu button {
+  border-radius: 9px;
+}
+
+/* The accent stripe down the left of the current row is this app's marker, not
+   the platform's. In this family the whole row fills instead, so the stripe
+   would be a second answer to the same question. */
+:root:where([data-theme-family='glass']) .nav-item.active::before,
+:root:where([data-theme-family='glass']) .nav-sub.active::before,
+:root:where([data-theme-family='glass']) .tree-folder.active::before,
+:root:where([data-theme-family='glass']) .tree-file.active::before {
+  display: none;
+}
+
+/* The switch, drawn the way the platform draws it: a taller track, a white
+   knob that carries its own shadow, and a solid accent fill when on rather
+   than a tint — a half-lit switch does not read as "on" at a glance. */
+:root:where([data-theme-family='glass']) .toggle {
+  width: 42px; height: 25px;
+  border-radius: var(--radius-pill);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--color-text) 16%, transparent);
+  padding: 0 3px;
+}
+:root:where([data-theme-family='glass']) .toggle .knob {
+  width: 19px; height: 19px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+:root:where([data-theme-family='glass']) .toggle.on {
+  background: var(--color-accent);
+  border-color: transparent;
+}
+:root:where([data-theme-family='glass']) .toggle.on .knob { background: #fff; }
+
+/* Focus is a halo around the control, matching its own shape, rather than a
+   square ring floating off it. */
+:root:where([data-theme-family='glass']) :focus-visible {
+  outline: 2.5px solid color-mix(in srgb, var(--color-accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* ── materials ──────────────────────────────────────────────────────────── */
+
+/* The chrome. Borders come off entirely: two frosted panes meeting need a
+   hairline of light between them, not a drawn line, and a `box-shadow` inset
+   gives a true half-pixel edge where a border cannot. */
+:root:where([data-theme-family='glass']):not([data-glass='off']) .sidebar,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .panel {
+  background: color-mix(in srgb, var(--color-surface) 38%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-right: 0;
+  box-shadow:
+    inset -1px 0 0 var(--g-hair),
+    inset 1px 0 0 color-mix(in srgb, #fff 6%, transparent);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .rail {
+  background: color-mix(in srgb, var(--color-surface) 34%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-right: 0;
+  box-shadow: inset -1px 0 0 var(--g-hair);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .tabstrip {
+  background: color-mix(in srgb, var(--color-surface) 40%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 -1px 0 var(--g-hair);
+}
+/* The top bar floats over the page it belongs to: no fill of its own, just
+   the hairline that separates it from what scrolls underneath. */
+:root:where([data-theme-family='glass']):not([data-glass='off']) .topbar {
+  -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow: inset 0 -1px 0 var(--g-hair);
+}
+
+/* Controls are made of the same material as the panes, which is the whole
+   premise of the look — a button is a small pane you can press. */
+:root:where([data-theme-family='glass']):not([data-glass='off']) .btn,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .chip,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .seg,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .side-search {
+  background: var(--g-fill);
+  border-color: var(--g-line);
+  -webkit-backdrop-filter: var(--g-control-blur); backdrop-filter: var(--g-control-blur);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent);
+  color: var(--color-neutral-200);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .btn:hover,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .chip:hover,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .side-search:hover {
+  background: var(--g-fill-hover);
+  border-color: var(--g-line);
+  color: var(--color-text);
+}
+/* The one prominent action on a screen. Apple fills it with the accent solid
+   and puts the light along its top edge; everything beside it stays frosted,
+   which is what makes it the prominent one. */
+:root:where([data-theme-family='glass']):not([data-glass='off']) .btn.primary {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #fff 16%, var(--color-accent)),
+    var(--color-accent));
+  border-color: transparent;
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 34%, transparent),
+    var(--g-lift);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .btn.primary:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #fff 26%, var(--color-accent)),
+    color-mix(in srgb, #fff 8%, var(--color-accent)));
+  color: #fff;
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .btn.link {
+  background: none; border-color: transparent; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+
+/* The segmented control: a recessed track with a floating thumb that slides.
+   The thumb is light, not accent — on this platform the accent says "chosen
+   action", and a segment is a chosen *view*. */
+:root:where([data-theme-family='glass']):not([data-glass='off']) .seg {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, #000 22%, transparent);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .seg button.on {
+  background: var(--g-fill-hover);
+  color: var(--color-text);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 30%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.26);
+}
+
+/* Where you are. A filled capsule of accent-tinted glass with its own catch
+   light — the row is lit, rather than merely tinted. */
+:root:where([data-theme-family='glass']):not([data-glass='off']) .nav-item.active,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .nav-sub.active,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .tree-folder.active,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .tree-file.active,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .rail-btn.active {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  color: var(--color-text);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 22%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.2);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .rail-btn.active { color: var(--color-text); }
+:root:where([data-theme-family='glass']) .nav-item:hover,
+:root:where([data-theme-family='glass']) .nav-sub:hover,
+:root:where([data-theme-family='glass']) .tree-folder:hover,
+:root:where([data-theme-family='glass']) .tree-file:hover,
+:root:where([data-theme-family='glass']) .rail-btn:hover {
+  background: color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+
+/* Menus and popovers — the surface this family is judged on, because it is the
+   one a student sees against their own wallpaper. Deeper frost, a wider
+   corner, room around the rows, and a hover that fills the row with the accent
+   the way the platform's own menus do. */
+:root:where([data-theme-family='glass']):not([data-glass='off']) .menu {
+  padding: 6px;
+  border: 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-surface) 58%, transparent);
+  -webkit-backdrop-filter: blur(50px) saturate(2.2); backdrop-filter: blur(50px) saturate(2.2);
+  box-shadow:
+    inset 0 0 0 1px var(--g-line),
+    inset 0 1px 0 color-mix(in srgb, #fff 26%, transparent),
+    0 12px 40px rgba(0, 0, 0, 0.34);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .menu button {
+  padding: calc(7px + var(--density-step)) 10px;
+  color: var(--color-neutral-200);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .menu button:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .menu button:hover i,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .menu button:hover .kbd {
+  color: color-mix(in srgb, #fff 80%, transparent);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .menu .sep {
+  background: var(--g-line); margin: 5px 8px;
+}
+
+/* Sheets. A bigger corner and a real drop, because a dialog in this family is
+   a pane lifted off the window rather than a card sitting on it. */
+:root:where([data-theme-family='glass']):not([data-glass='off']) .dialog {
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-surface) 62%, transparent);
+  -webkit-backdrop-filter: blur(50px) saturate(2.2); backdrop-filter: blur(50px) saturate(2.2);
+  box-shadow:
+    inset 0 0 0 1px var(--g-line),
+    inset 0 1px 0 color-mix(in srgb, #fff 28%, transparent),
+    0 24px 70px rgba(0, 0, 0, 0.4);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .toast {
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 11px 18px;
+  box-shadow: inset 0 0 0 1px var(--g-line), var(--g-lift);
+}
+
+/* Fields are recessed rather than raised: the light goes along the top *inside*
+   the box, which is how the platform says "type here" instead of "press me". */
+:root:where([data-theme-family='glass']):not([data-glass='off']) .input {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  border-color: var(--g-line);
+  -webkit-backdrop-filter: var(--g-control-blur); backdrop-filter: var(--g-control-blur);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, #000 18%, transparent);
+}
+:root:where([data-theme-family='glass']):not([data-glass='off']) .input:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, #000 18%, transparent);
+}
+
+/* Cards get the family's own rim rather than a drawn border. Home's panels are
+   not in the list: they have no frame in any family, and a rim with nothing to
+   run along is a rectangle of light around a heading. */
+:root:where([data-theme-family='glass']):not([data-glass='off']) .glass-card,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .stat,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .file-card,
+:root:where([data-theme-family='glass']):not([data-glass='off']) .option-card {
+  border-color: var(--g-line);
+  box-shadow: var(--glass-rim), var(--g-lift);
+}
+
+/* Scrollbars stay out of the way, as they do everywhere else on this desktop. */
+:root:where([data-theme-family='glass']) ::-webkit-scrollbar { width: 9px; height: 9px; }
+:root:where([data-theme-family='glass']) ::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-text) 22%, transparent);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+:root:where([data-theme-family='glass']) ::-webkit-scrollbar-track { background: none; }
+
+/* ── high contrast has the last word ───────────────────────────────────────
+   tokens.css already says translucent chrome must go opaque for a reader who
+   asked for high contrast, but it says it in a file that loads first, so every
+   glass rule in this one was quietly outranking it at equal weight. Repeating
+   it here, below everything, is what actually makes it stick — and it now also
+   undoes the hairline rims and lifts the family adds above. */
+:root[data-contrast='high'] .menu,
+:root[data-contrast='high'] .palette,
+:root[data-contrast='high'] .dialog,
+:root[data-contrast='high'] .toast,
+:root[data-contrast='high'] .dock,
+:root[data-contrast='high'] .sel-pop,
+:root[data-contrast='high'] .select-bar,
+:root[data-contrast='high'] .sidebar,
+:root[data-contrast='high'] .rail,
+:root[data-contrast='high'] .panel,
+:root[data-contrast='high'] .tabstrip,
+:root[data-contrast='high'] .topbar,
+:root[data-contrast='high'] .btn,
+:root[data-contrast='high'] .chip,
+:root[data-contrast='high'] .input,
+:root[data-contrast='high'] .seg {
+  background: var(--color-surface);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border: 1px solid var(--color-neutral-700);
+  box-shadow: none;
+}
+:root[data-contrast='high'] .sidebar,
+:root[data-contrast='high'] .rail,
+:root[data-contrast='high'] .panel {
+  border: 0; border-right: 1px solid var(--color-neutral-700);
+}
+:root[data-contrast='high'] .topbar,
+:root[data-contrast='high'] .tabstrip {
+  border: 0; border-bottom: 1px solid var(--color-neutral-700);
+}
+:root[data-contrast='high'] .btn.primary {
+  background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent);
+}
+/* A quiet text button is a change of mind, not a step, and boxing it in high
+   contrast would make it look like the step beside it. */
+:root[data-contrast='high'] .btn.link {
+  background: none; border-color: transparent;
+}
+
+/* ── organic: paper, not screen ────────────────────────────────────────────
+   The family blocks in tokens.css set the ground, the pigments, the corners
+   and the serif. None of that on its own changes what the app looks like,
+   because the chrome drawn on top — a sidebar with a hard 1px rule down it,
+   6px buttons, a two-pixel stripe beside the selected row — is screen
+   furniture, and screen furniture in a warm palette is still screen
+   furniture. This block is the rest of the theme: the shapes and surfaces
+   that make the same app read as something laid out on a desk.
+
+   Three rules run through all of it. Nothing is separated by a line where a
+   change of paper will do. Nothing is a rectangle where a rounded card will
+   do. And the serif that tokens.css hands to headings is put on every label
+   that is read rather than scanned, because the typeface is what carries the
+   voice — a palette on its own is just a palette.
+
+   Written as `:root:where([data-theme-family='organic'])` so the family adds
+   nothing to specificity: these sit level with the default chrome above and
+   win on document order, and lose to the high-contrast block at the foot of
+   this file, which is what keeps Increase Contrast working here too. */
+
+:root:where([data-theme-family='organic']) {
+  /* Paper is not one colour. The sidebar is the sheet the page is resting on,
+     so it sits *behind* the ground rather than being a lighter version of it. */
+  --rail-bg: color-mix(in srgb, var(--color-bg) 93%, var(--color-text));
+  --chrome-bg: color-mix(in srgb, var(--color-bg) 96%, var(--color-text));
+
+  /* A rule pressed into paper rather than drawn on glass: warm, and never at
+     full strength. Where one is unavoidable it is this. */
+  --o-rule: color-mix(in srgb, var(--color-text) 9%, transparent);
+  --o-rule-soft: color-mix(in srgb, var(--color-text) 5%, transparent);
+  /* Ink soaked into the sheet: what a resting card is lifted by. Brown, not
+     black, so the shadow belongs to the same world as the paper. */
+  --o-lift: 0 1px 1px rgba(46, 30, 12, 0.06), 0 6px 18px rgba(46, 30, 12, 0.10);
+  --o-lift-high: 0 2px 3px rgba(46, 30, 12, 0.09), 0 18px 42px rgba(46, 30, 12, 0.16);
+  --o-press: inset 0 1px 2px rgba(46, 30, 12, 0.10);
+  /* A wash is pigment thinned with water, so it keeps some of the ground. */
+  --o-wash: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  --o-wash-soft: color-mix(in srgb, var(--color-accent) 9%, transparent);
+}
+:root:where([data-theme-family='organic'][data-theme='dark']) {
+  --rail-bg: color-mix(in srgb, var(--color-bg) 94%, #000);
+  --chrome-bg: color-mix(in srgb, var(--color-bg) 97%, #000);
+  --o-lift: 0 1px 1px rgba(0, 0, 0, 0.30), 0 6px 18px rgba(0, 0, 0, 0.26);
+  --o-lift-high: 0 2px 3px rgba(0, 0, 0, 0.34), 0 18px 42px rgba(0, 0, 0, 0.38);
+  --o-press: inset 0 1px 2px rgba(0, 0, 0, 0.26);
+}
+
+/* The grain. A single tile of filtered noise at two per cent, fixed to the
+   window so it does not swim when a page scrolls under it. It is the cheapest
+   honest way to stop a flat fill reading as a flat fill, and it is behind
+   everything and clicks through. */
+:root:where([data-theme-family='organic']) body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
+}
+:root:where([data-theme-family='organic'][data-theme='dark']) body::before {
+  mix-blend-mode: screen;
+  opacity: 0.22;
+}
+:root:where([data-theme-family='organic'][data-contrast='high']) body::before { display: none; }
+
+/* ── edges ──────────────────────────────────────────────────────────────
+   Every hard division in the shell becomes a change of paper with, at most, a
+   hairline in it. The sidebar and the panel lose their borders outright: the
+   sheet behind the page is already a different sheet. */
+:root:where([data-theme-family='organic']) .sidebar,
+:root:where([data-theme-family='organic']) .panel {
+  border-right: 0;
+  box-shadow: inset -1px 0 0 var(--o-rule-soft);
+}
+:root:where([data-theme-family='organic']) .rail {
+  background: color-mix(in srgb, var(--rail-bg) 94%, var(--color-text));
+  border-right: 0;
+  box-shadow: inset -1px 0 0 var(--o-rule-soft);
+}
+:root:where([data-theme-family='organic'][data-theme='dark']) .rail {
+  background: color-mix(in srgb, var(--rail-bg) 92%, #000);
+}
+:root:where([data-theme-family='organic']) .tabstrip {
+  background: var(--chrome-bg);
+  box-shadow: inset 0 -1px 0 var(--o-rule-soft);
+}
+:root:where([data-theme-family='organic']) .sidebar-foot {
+  border-top: 1px solid var(--o-rule-soft);
+}
+
+/* ── the shapes things are cut to ───────────────────────────────────────
+   Rounder than the default by roughly half again. A row in the sidebar is a
+   card the width of the sidebar, not a highlighted line of text. */
+:root:where([data-theme-family='organic']) .nav-item,
+:root:where([data-theme-family='organic']) .nav-sub,
+:root:where([data-theme-family='organic']) .tree-folder,
+:root:where([data-theme-family='organic']) .tree-file,
+:root:where([data-theme-family='organic']) .rail-btn,
+:root:where([data-theme-family='organic']) .menu button,
+:root:where([data-theme-family='organic']) .tab {
+  border-radius: 11px;
+}
+:root:where([data-theme-family='organic']) .btn,
+:root:where([data-theme-family='organic']) .chip,
+:root:where([data-theme-family='organic']) .seg,
+:root:where([data-theme-family='organic']) .seg button,
+:root:where([data-theme-family='organic']) .side-search,
+:root:where([data-theme-family='organic']) .menu-search,
+:root:where([data-theme-family='organic']) .tabs-add,
+:root:where([data-theme-family='organic']) .crumb-back,
+:root:where([data-theme-family='organic']) .toast-action {
+  border-radius: 10px;
+}
+
+/* The stripe beside a selected row is a screen device — a marker drawn in the
+   margin. Paper marks a chosen thing by being a different colour of paper. */
+:root:where([data-theme-family='organic']) .nav-item.active::before,
+:root:where([data-theme-family='organic']) .tab.active::before,
+:root:where([data-theme-family='organic']) .rail-btn.active::before {
+  display: none;
+}
+
+/* ── ink ────────────────────────────────────────────────────────────────
+   The serif that tokens.css gives headings is put on everything that is read
+   rather than scanned. This is the loudest half of the theme: the same screen
+   in the same colours, set in a serif, is a different application. */
+:root:where([data-theme-family='organic']) .section-label {
+  font-family: var(--font-heading);
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--color-neutral-500);
+}
+:root:where([data-theme-family='organic']) .nav-item,
+:root:where([data-theme-family='organic']) .panel-head,
+:root:where([data-theme-family='organic']) .tab .label,
+:root:where([data-theme-family='organic']) .crumbs,
+:root:where([data-theme-family='organic']) .page-title {
+  font-family: var(--font-heading);
+}
+:root:where([data-theme-family='organic']) .nav-item.active,
+:root:where([data-theme-family='organic']) .tab.active .label {
+  font-weight: 600;
+}
+
+/* ── surfaces ───────────────────────────────────────────────────────────
+   A button is a small card: paper, a warm edge, and just enough shadow to sit
+   above the sheet. It lifts on hover and presses on click, because that is
+   what an object does and a rectangle that only changes colour does not. */
+:root:where([data-theme-family='organic']) .btn,
+:root:where([data-theme-family='organic']) .chip {
+  background: var(--color-surface);
+  border-color: var(--o-rule);
+  box-shadow: var(--o-lift);
+  transition: transform 0.14s var(--ease-out), box-shadow 0.14s var(--ease-out), background 0.14s ease;
+}
+:root:where([data-theme-family='organic']) .btn:hover,
+:root:where([data-theme-family='organic']) .chip:hover {
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-accent));
+  border-color: color-mix(in srgb, var(--color-accent) 30%, var(--o-rule));
+  transform: translateY(-1px);
+}
+:root:where([data-theme-family='organic']) .btn:active,
+:root:where([data-theme-family='organic']) .chip:active {
+  transform: translateY(0);
+  box-shadow: var(--o-press);
+}
+/* A quiet text button is not an object and must not be given an edge. */
+:root:where([data-theme-family='organic']) .btn.link,
+:root:where([data-theme-family='organic']) .btn.ghost {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+:root:where([data-theme-family='organic']) .btn.primary {
+  background: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 70%, #000);
+  color: var(--color-bg);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 26%, transparent), var(--o-lift);
+}
+:root:where([data-theme-family='organic']) .btn.primary:hover {
+  background: color-mix(in srgb, var(--color-accent) 88%, var(--color-text));
+}
+
+/* Recessed track, raised paper thumb — the segmented control as a physical
+   switch rather than two tinted rectangles. */
+:root:where([data-theme-family='organic']) .seg {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  border-color: transparent;
+  box-shadow: var(--o-press);
+}
+:root:where([data-theme-family='organic']) .seg button.on {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--o-lift);
+}
+
+:root:where([data-theme-family='organic']) .input,
+:root:where([data-theme-family='organic']) .side-search,
+:root:where([data-theme-family='organic']) .menu-search {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  border-color: var(--o-rule);
+  box-shadow: var(--o-press);
+}
+:root:where([data-theme-family='organic']) .input:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: var(--o-press), 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+/* Selection is a wash of pigment, and it carries the accent into the text as
+   well as behind it, the way a highlighter does on a page. */
+:root:where([data-theme-family='organic']) .nav-item.active,
+:root:where([data-theme-family='organic']) .tree-file.active,
+:root:where([data-theme-family='organic']) .rail-btn.active,
+:root:where([data-theme-family='organic']) .tab.active {
+  background: var(--o-wash);
+  color: var(--color-text);
+}
+:root:where([data-theme-family='organic']) .nav-item:hover,
+:root:where([data-theme-family='organic']) .tree-file:hover,
+:root:where([data-theme-family='organic']) .tree-folder:hover,
+:root:where([data-theme-family='organic']) .rail-btn:hover {
+  background: var(--o-wash-soft);
+}
+
+/* ── things that float ──────────────────────────────────────────────────
+   A menu, a dialog and a toast are sheets set down on the desk: rounder than
+   anything fixed in place, and lifted by a warm shadow rather than outlined. */
+:root:where([data-theme-family='organic']) .menu {
+  border-radius: var(--radius-lg);
+  border-color: var(--o-rule);
+  padding: 6px;
+  box-shadow: var(--o-lift-high);
+}
+:root:where([data-theme-family='organic']) .menu button:hover {
+  background: var(--o-wash);
+}
+:root:where([data-theme-family='organic']) .dialog {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--o-lift-high);
+}
+:root:where([data-theme-family='organic']) .toast {
+  border-radius: 999px;
+  box-shadow: var(--o-lift-high);
+}
+:root:where([data-theme-family='organic']) .card-surface,
+:root:where([data-theme-family='organic']) .card-block,
+:root:where([data-theme-family='organic']) .stat,
+:root:where([data-theme-family='organic']) .option-card {
+  border-radius: var(--radius-lg);
+  border-color: var(--o-rule);
+  box-shadow: var(--o-lift);
+}
+
+/* The switch: a bone toggle in a clay slot, larger than the default because a
+   soft shape needs the room to read as soft. */
+:root:where([data-theme-family='organic']) .toggle {
+  width: 40px; height: 23px;
+  border-radius: 999px;
+  border-color: transparent;
+  background: color-mix(in srgb, var(--color-text) 14%, transparent);
+  box-shadow: var(--o-press);
+}
+:root:where([data-theme-family='organic']) .toggle .knob {
+  width: 17px; height: 17px;
+  background: var(--color-surface);
+  box-shadow: var(--o-lift);
+}
+:root:where([data-theme-family='organic']) .toggle.on {
+  background: var(--color-accent);
+  border-color: transparent;
+}
+:root:where([data-theme-family='organic']) .toggle.on .knob { background: #fff; }
+
+/* Focus is a wash rather than a hairline, for the same reason nothing else
+   here is outlined. */
+:root:where([data-theme-family='organic']) :focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Warm, narrow, and only as dark as a pencil line. */
+:root:where([data-theme-family='organic']) ::-webkit-scrollbar { width: 11px; height: 11px; }
+:root:where([data-theme-family='organic']) ::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--color-text) 18%, transparent);
+}
+:root:where([data-theme-family='organic']) ::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--color-text) 30%, transparent);
+}
+:root:where([data-theme-family='organic']) ::selection {
+  background: color-mix(in srgb, var(--color-accent) 32%, transparent);
+}
+
 
 /* ── motion ────────────────────────────────────────────────────────────────
    Springy, short and physical: things grow out of where they came from,
@@ -4688,3 +6265,103 @@ body.focus-hide-sidebar .sidebar, body.focus-hide-sidebar .rail, body.focus-hide
 .release-notes-body { margin-top: 6px; white-space: pre-wrap; line-height: 1.6; font-size: 12.5px; }
 .whats-new { display: flex; flex-direction: column; gap: 12px; }
 .whats-new .small { font-size: 11.5px; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Details the Mac does that a web page usually doesn't.
+
+   None of this is visible on its own. Together it is most of the difference
+   between an app and a page: the window that goes quiet when you look away, the
+   separator that is genuinely one device pixel, the scrollbar that isn't there
+   until you reach for it.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* The inactive window.
+
+   When Studex isn't the app you're in, macOS drains the colour out of its
+   chrome: the traffic lights grey, the sidebar selection stops being blue. It
+   is how you tell, at a glance across two monitors, which window your typing is
+   going into. Only the chrome changes — the content is still the content, and
+   dimming what someone is reading because they clicked elsewhere would be a
+   worse app, not a more Mac-like one. */
+:root[data-key='off'] .sidebar,
+:root[data-key='off'] .rail {
+  --accent-wash: color-mix(in srgb, var(--color-text) 7%, transparent);
+  --accent-wash-soft: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+:root[data-key='off'] .rail-btn.active,
+:root[data-key='off'] .nav-sub.active { color: var(--color-neutral-300); }
+:root[data-key='off'] .topbar,
+:root[data-key='off'] .sidebar,
+:root[data-key='off'] .rail {
+  opacity: 0.82;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+/* The mark is the app's face; it shouldn't go grey with everything else. */
+:root[data-key='off'] .rail .mark { opacity: 1; }
+
+/* Hairlines.
+
+   A separator drawn at 1 CSS pixel is two device pixels on a Retina screen, and
+   next to the system's own it reads as a drawn line rather than an edge. Half a
+   pixel is the real thing. Scoped to the chrome: content borders are often
+   doing a different job — a table cell, a card, a focus ring — where landing on
+   the pixel grid matters more than delicacy. */
+@media (min-resolution: 2dppx) {
+  .sidebar, .rail, .sidebar-foot, .topbar, .tabstrip {
+    border-width: 0.5px;
+  }
+}
+
+/* Scrollbars that get out of the way.
+
+   macOS hides a scrollbar until you're in the thing that scrolls — which is
+   also when the page stops having a permanent 10px stripe down its side that
+   nothing is using. The track keeps its width so nothing reflows when the thumb
+   appears; only the thumb fades. Left alone where there is no pointer to hover
+   with, and where Increase Contrast has asked for everything to be visible. */
+@media (hover: hover) {
+  :root:not([data-contrast='high']) ::-webkit-scrollbar-thumb {
+    background: transparent;
+    transition: background var(--dur-base) var(--ease-out);
+  }
+  :root:not([data-contrast='high']) *:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-text) 17%, transparent);
+    background-clip: content-box;
+  }
+  :root:not([data-contrast='high']) *:hover::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--color-text) 30%, transparent);
+    background-clip: content-box;
+  }
+}
+
+/* Reduce Transparency.
+
+   theme.js and store.js already turn `data-glass` off when the system asks, so
+   the app's own opaque path does the work. This is the backstop for surfaces
+   that frost on their own account — and for the first frame, before any script
+   has run. */
+@media (prefers-reduced-transparency: reduce) {
+  * {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .menu, .palette, .dialog, .toast, .dock, .sel-pop, .select-bar, .tabstrip {
+    background: var(--color-surface);
+  }
+  .sidebar, .rail { background: var(--rail-bg); }
+}
+
+/* Menus that come out of the thing you clicked.
+
+   A macOS menu doesn't cut in; it grows from its control over about a tenth of
+   a second, which is short enough to be felt rather than watched. The origin is
+   set by menu.js from where the menu actually landed, so one opened upward
+   unfolds upward. */
+.menu {
+  transform-origin: var(--menu-origin-y, top) var(--menu-origin-x, left);
+  animation: menu-in var(--dur-fast) var(--ease-out);
+}
+@keyframes menu-in { from { opacity: 0; transform: scale(0.96); } }
+@media (prefers-reduced-motion: reduce) {
+  .menu { animation: none; }
+}

@@ -15,7 +15,7 @@ import { el, icon, mount, applyColor } from '../dom.js';
 import { dropdown } from '../select.js';
 import { api } from '../api.js';
 import { navigate } from '../router.js';
-import { topbar, subnav } from '../shell.js';
+import { topbar, subnav, pageMenu } from '../shell.js';
 import { state, subjectById, toast, reportError } from '../store.js';
 import { openMenu } from '../menu.js';
 import { dialog, confirmDelete } from '../dialog.js';
@@ -30,9 +30,31 @@ const CONF_COLOR = ['rose', 'rose', 'amber', 'lime', 'teal'];
 let filterSubject = '';
 const folded = new Set();
 
+/** True when nothing is left open — which is what turns the button around. */
+function allFolded(groups) {
+  return groups.length > 0 && groups.every(([key]) => folded.has(key));
+}
+
 export async function topicsView(route, host) {
   if (route.path[1] === 'due') return dueView(route, host);
+  // topics/<subjectId> opens the matrix already filtered, so a lesson on Home,
+  // a Spotlight result and a studex:// link can all name a subject and land on
+  // it. An id that is not a subject any more is ignored rather than empty.
+  const wanted = route.path[1];
+  if (wanted && state.subjects.some((s) => s.id === wanted)) filterSubject = wanted;
   return matrixView(route, host);
+}
+
+/**
+ * The subject's topic list as a .studexpack — names and units, none of the
+ * confidence ratings. A menu row has no href, so the link is made, clicked and
+ * thrown away, the same way the rest of the app hands a file to the browser.
+ */
+function downloadPack(subjectId) {
+  const link = el('a', { href: `/api/subjects/${subjectId}/pack`, download: '' });
+  document.body.append(link);
+  link.click();
+  link.remove();
 }
 
 /* ── the matrix ───────────────────────────────────────────────────────── */
@@ -47,26 +69,42 @@ async function matrixView(route, host) {
   const scope = filterSubject ? `“${subjectById(filterSubject)?.name ?? 'this subject'}”` : 'every subject';
 
   mount(host,
+    // Six chips across the top left no room for the path and none of them for
+    // the one thing this screen is for. Adding a topic stays a button; getting
+    // a list in or out is occasional, so it moves into the ⋯ menu.
     topbar(['Topics'],
-      ai
-        ? el('button', { class: 'chip', onclick: () => importSpecDialog({ subjectId: filterSubject, refresh }) }, icon('sparkle'), 'Import a specification')
-        : null,
-      el('button', { class: 'chip', onclick: () => importDialog(refresh) }, icon('clipboard-text'), 'Paste a list'),
-      el('button', { class: 'chip', title: 'Import a .studexpack topic list a classmate saved', onclick: () => void importTopicPack(refresh) }, icon('package'), 'Import pack'),
-      filterSubject && topics.length
-        ? el('a', {
-          class: 'chip', href: `/api/subjects/${filterSubject}/pack`, download: '',
-          title: 'Save this subject’s topic list as a .studexpack — names and units, none of your confidence ratings',
-        }, icon('share-network'), 'Share list')
-        : null,
-      ai && topics.length > 1
-        ? el('button', { class: 'chip', onclick: () => dedupeDialog({ subjectId: filterSubject || null, scope, refresh }) }, icon('copy'), 'Find duplicates')
-        : null,
       el('button', { class: 'chip', onclick: () => topicDialog(null, refresh) }, icon('plus'), 'New topic'),
+      pageMenu(() => [
+        { head: 'TOPICS' },
+        ai ? { icon: 'sparkle', label: 'Import a specification…', onSelect: () => importSpecDialog({ subjectId: filterSubject, refresh }) } : null,
+        { icon: 'clipboard-text', label: 'Paste a list…', onSelect: () => importDialog(refresh) },
+        { icon: 'package', label: 'Import a pack…', onSelect: () => void importTopicPack(refresh) },
+        filterSubject && topics.length
+          ? { icon: 'share-network', label: 'Save this subject as a pack', onSelect: () => downloadPack(filterSubject) }
+          : null,
+        ai && topics.length > 1
+          ? { icon: 'copy', label: 'Find duplicates…', onSelect: () => dedupeDialog({ subjectId: filterSubject || null, scope, refresh }) }
+          : null,
+      ]),
     ),
     subnav('topics', 'topics',
       subjectFilter(refresh),
       el('span', { class: 'week-label', text: plural(summary.total, 'topic') }),
+      // A specification unpacks into thirty units, and the only way back to a
+      // list you can see the shape of was thirty clicks. One button folds the
+      // lot, and — once everything is folded — unfolds it again.
+      groups.length > 1
+        ? el('button', {
+          class: 'chip', type: 'button',
+          title: allFolded(groups) ? 'Open every subject' : 'Fold every subject down to its heading',
+          onclick: () => {
+            if (allFolded(groups)) folded.clear();
+            else for (const [key] of groups) folded.add(key);
+            refresh();
+          },
+        }, icon(allFolded(groups) ? 'arrows-out-line-vertical' : 'arrows-in-line-vertical', { size: 13 }),
+        allFolded(groups) ? 'Expand all' : 'Collapse all')
+        : null,
     ),
     el('div', { class: 'content' },
       summaryTiles(summary, confidenceDays),

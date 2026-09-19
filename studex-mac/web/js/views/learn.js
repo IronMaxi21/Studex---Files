@@ -30,6 +30,9 @@ import { cardFaces } from '../cards-inline.js';
 import { renderMathText, mathLineToText } from '../math.js';
 import { matches, normalise } from '../answer-match.js';
 import { templateFor, surfaceClasses, showBackFirst } from '../deck-template.js';
+import { aiAvailable, explainCard } from '../ai.js';
+import { confetti, celebrateIfStreakGrew, studyDay } from '../celebrate.js';
+import { sfx } from '../sfx.js';
 
 const STAGES = ['recognise', 'recall', 'type'];
 /** Correct answers needed at each rung before the card moves up. */
@@ -79,6 +82,10 @@ export async function learnSession(host, deckId) {
     return;
   }
 
+  // The day's figures before a single card is graded: a lesson is study, and
+  // for a student starting a new deck it is often the day's first.
+  const dayBefore = await studyDay();
+
   // Stored progress for cards that are still new; anything since reviewed,
   // deleted or suspended is dropped rather than resurrected.
   const saved = loadProgress(deckId);
@@ -117,7 +124,10 @@ export async function learnSession(host, deckId) {
   let shownAt = Date.now();
 
   const body = el('div', { class: 'study' });
-  mount(host, body);
+  mount(host, topbar(crumbs), body);
+  const ai = await aiAvailable().catch(() => false);
+  // The explanation of the card on screen, once asked for; cleared with the card.
+  let explainer = null;
 
   const persist = () => {
     const keep = {};
@@ -159,6 +169,7 @@ export async function learnSession(host, deckId) {
     delete body.dataset.revealed;
     phase = 'ask';
     result = null;
+    explainer = null;
     options = STAGES[progress[current.id].stage] === 'recognise' ? optionsFor(current) : null;
     shownAt = Date.now();
     draw();
@@ -171,6 +182,7 @@ export async function learnSession(host, deckId) {
     const p = progress[card.id];
     result = { correct, given };
     phase = 'answered';
+    sfx(correct ? 'right' : 'wrong');
     if (correct) {
       p.right += 1;
       if (p.right >= NEEDED[p.stage]) {
@@ -223,6 +235,7 @@ export async function learnSession(host, deckId) {
     await loadLibrary();
     refreshDue().catch(() => { /* a stale badge is not worth an error */ });
     const remaining = fresh.length - graduated;
+    if (graduated) { confetti(); sfx('finish'); }
     mount(body,
       el('div', { class: 'empty-state session-done', style: { flex: '1' } },
         icon('graduation-cap', { size: 34 }),
@@ -236,6 +249,7 @@ export async function learnSession(host, deckId) {
         ),
       ),
     );
+    if (graduated) await celebrateIfStreakGrew(dayBefore);
   }
 
   function ladder(card) {
@@ -261,7 +275,28 @@ export async function learnSession(host, deckId) {
       face('', faces.back),
       !result.correct && result.given ? el('div', { class: 'dim', style: { marginTop: '8px', fontSize: '13px' }, text: `You answered: ${result.given}` }) : null,
       el('div', { class: 'dim', style: { marginTop: '8px', fontSize: '12.5px' }, text: note }),
+      ai ? explainRow(faces) : null,
     );
+  }
+
+  /**
+   * "Explain" under a marked card. The answer is held on `explainer` rather
+   * than re-requested: draw() runs again on every keystroke, and each
+   * explanation is a paid request.
+   */
+  function explainRow(faces) {
+    if (explainer) return explainer;
+    return el('button', {
+      type: 'button', class: 'chip ai', title: 'Ask AI to explain this card',
+      onclick: () => {
+        explainer = explainCard({
+          front: faces.front,
+          back: faces.back,
+          given: result?.correct ? '' : (result?.given ?? ''),
+        });
+        draw();
+      },
+    }, icon('sparkle', { size: 13 }), 'Explain this');
   }
 
   function askArea(card, faces, stage) {
@@ -335,7 +370,8 @@ export async function learnSession(host, deckId) {
         el('div', { class: 'card-face' },
           el('span', { class: 'section-label plain', text: label }),
           el('div', {
-            class: 'card-surface' + surfaceClasses(template) + (showBack ? '' : ' hidden-answer'),
+            class: 'card-surface' + surfaceClasses(template)
+              + (showBack ? (result?.correct ? ' right' : ' wrong') : ' hidden-answer'),
             role: 'group', 'aria-live': 'polite',
             'aria-label': `${card.topic ? card.topic + '. ' : ''}Question. ${mathLineToText(faces.front)}.`,
           },

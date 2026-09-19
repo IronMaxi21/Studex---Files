@@ -1,8 +1,8 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from './config.js';
 import { hashToken, safeEqual } from './crypto.js';
-import { authenticate, type SessionRow, type User } from '../domain/auth.js';
-import { forbidden, unauthorized } from './errors.js';
+import { authenticate, revocationReason, type SessionRow, type User } from '../domain/auth.js';
+import { forbidden, sessionReplaced, unauthorized } from './errors.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -107,7 +107,13 @@ export function loadSession(req: FastifyRequest): void {
 
 /** Route guard: requires an authenticated caller and a valid CSRF token. */
 export function requireAuth(req: FastifyRequest): { user: User; session: SessionRow } {
-  if (!req.user || !req.session) throw unauthorized();
+  if (!req.user || !req.session) {
+    const extracted = extractToken(req);
+    if (extracted && revocationReason(extracted.token) === 'signed_in_elsewhere') {
+      throw sessionReplaced();
+    }
+    throw unauthorized();
+  }
   enforceCsrf(req, req.session);
   return { user: req.user, session: req.session };
 }

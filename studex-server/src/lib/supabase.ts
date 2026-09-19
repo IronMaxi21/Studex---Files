@@ -191,7 +191,14 @@ export const supabaseGateway: AuthGateway = {
     const { data, error } = await sb.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        data: { display_name: displayName },
+        // Confirming an address happens in a browser, often on a different
+        // device from the one Studex is installed on. The link lands on a page
+        // that says so and offers to open the app, rather than on whatever
+        // Supabase would have chosen.
+        emailRedirectTo: config.supabase?.emailRedirectUrl,
+      },
     });
     if (error) throw translate(error, 'sign-up');
 

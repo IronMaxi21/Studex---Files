@@ -238,6 +238,35 @@ export function setNextLesson(title) {
   send('next-lesson', { title: title ? String(title).slice(0, 80) : '' });
 }
 
+/**
+ * The day's progress, for the menu bar: how many cards have been reviewed and
+ * how long the streak is. It rides along with the due count from the same
+ * fetch, so nothing is asked of the server for the menu's sake alone.
+ */
+export function setStudyProgress({ reviewed = 0, streak = 0 } = {}) {
+  send('study-progress', { reviewed: Math.max(0, Math.round(reviewed) || 0), streak: Math.max(0, Math.round(streak) || 0) });
+}
+
+/**
+ * What the focus timer is doing, for the menu bar.
+ *
+ * It sends the moment the block ends rather than the seconds left, so the
+ * clock beside the system clock can count down on its own instead of the page
+ * posting a message every second. Sent when the timer changes state, which is
+ * the only time any of these fields move.
+ */
+export function setFocusState({ phase = 'idle', status = '', endsAt = 0, goal = '', remaining = 0 } = {}) {
+  send('focus-state', {
+    phase,
+    status,
+    // Zero while paused, when there is no end time to count towards; the
+    // frozen `remaining` is what the menu shows then.
+    endsAt: Math.round(endsAt) || 0,
+    remaining: Math.max(0, Math.round(remaining) || 0),
+    goal: goal ? String(goal).slice(0, 60) : '',
+  });
+}
+
 /* ── windows ──────────────────────────────────────────────────────────── */
 
 /**

@@ -3,6 +3,7 @@ import { getDb } from '../lib/db.js';
 import { badRequest } from '../lib/errors.js';
 import { isValidTimeZone } from '../lib/time.js';
 import { AUTO_SYNC_CHOICES, isAutoSyncChoice } from './autosync.js';
+import { may, USER_CANVAS_CHROME, USER_SHELL } from './capabilities.js';
 
 /** "Theme and accent follow your account everywhere." */
 export const accountSettingsSchema = z
@@ -149,6 +150,11 @@ export function getDeviceSettings(userId: string, deviceId: string) {
 
   return {
     ...row,
+    // A build that may not change the app's shape is told the shape it has,
+    // whatever is in its row. Rows outlive builds: a machine that ran a
+    // developer build on this account once must not come back to a release
+    // build still wearing a layout that build no longer offers.
+    ...(may('layoutChoice') ? {} : { shell_layout: USER_SHELL, canvas_chrome: USER_CANVAS_CHROME }),
     show_minimap: row.show_minimap === 1,
     focus_mode: row.focus_mode === 1,
     reduce_motion: row.reduce_motion === 1,
@@ -163,6 +169,12 @@ export function updateDeviceSettings(
 ) {
   getDeviceSettings(userId, deviceId); // ensures the row exists
   const now = Date.now();
+
+  // Enforced here rather than left to the screen that draws the controls: the
+  // UI is the part anyone can edit, so hiding a control only tidies the app.
+  if (!may('layoutChoice')) {
+    patch = { ...patch, shellLayout: undefined, canvasChrome: undefined };
+  }
 
   getDb()
     .prepare(

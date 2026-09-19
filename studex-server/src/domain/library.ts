@@ -526,12 +526,27 @@ export function purgeFile(userId: string, fileId: string): void {
   requireFile(userId, fileId, { includeTrashed: true });
   const orphaned = tx(() => {
     const keys = releaseStorageForFiles(userId, [fileId]);
+    // The kept earlier versions go with the file. Their rows fall to the
+    // foreign key, so the blobs have to be named before the file row goes or
+    // they stay on disk with nothing pointing at them. They were never charged
+    // against the quota, so nothing is credited back for them.
+    keys.push(...revisionBlobsForFile(userId, fileId));
     search.removeForFile(fileId);
     tags.forgetItems(userId, 'file', [fileId]);
     getDb().prepare('DELETE FROM files WHERE id = ? AND user_id = ?').run(fileId, userId);
     return keys;
   });
   void unlinkBlobs(orphaned);
+}
+
+/** The blobs behind a file's kept earlier versions. */
+function revisionBlobsForFile(userId: string, fileId: string): string[] {
+  return getDb()
+    .prepare<[string, string], { storage_key: string }>(
+      'SELECT storage_key FROM file_revisions WHERE user_id = ? AND file_id = ?',
+    )
+    .all(userId, fileId)
+    .map((row) => row.storage_key);
 }
 
 /**

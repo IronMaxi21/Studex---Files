@@ -3,9 +3,9 @@
  *
  * Bold is `**like this**`, italic `*like this*`, underline `__like this__`,
  * highlight `==like this==` (and `==lime|like this==` for a colour other than
- * the default), and code `` `like this` ``. A link to another page is
- * `[[Title]]`, a tag is `##name`, and a cloze deletion — a word blanked out
- * for recall — is `{like this}`.
+ * the default), coloured text `%%rose|like this%%`, and code `` `like this` ``.
+ * A link to another page is `[[Title]]`, a tag is `##name`, and a cloze
+ * deletion — a word blanked out for recall — is `{like this}`.
  * The marks live in the line's own text, which is why a document stays a list
  * of plain strings: nothing here produces markup the server has to trust, and
  * a note written on one machine reads the same on another.
@@ -19,12 +19,14 @@
  * Kept in step with studex-server/src/lib/inline.ts.
  */
 import { el } from './dom.js';
+import { hasMath, mathSegments, renderMath } from './math.js';
 
 /** Longest first, so `**` is never read as two italics. */
 const MARKS = [
   { token: '**', key: 'bold', class: 'em-b' },
   { token: '__', key: 'underline', class: 'em-u' },
   { token: '==', key: 'highlight', class: 'em-h' },
+  { token: '%%', key: 'color', class: 'em-k' },
   { token: '*', key: 'italic', class: 'em-i' },
   { token: '`', key: 'code', class: 'em-c' },
 ];
@@ -39,6 +41,21 @@ export const MARK_TOKENS = { bold: '**', italic: '*', underline: '__', highlight
  * plain `==word==` anyone would type by habit still works.
  */
 export const HIGHLIGHTS = ['amber', 'lime', 'sky', 'rose', 'violet'];
+
+/**
+ * The colours the words themselves can be written in.
+ *
+ * The same five names as a highlight, so there is one vocabulary of colour in
+ * a document rather than two — but drawn at a strength that can be read as
+ * text rather than as a wash behind it. `grey` is only here: it says "this
+ * line matters less", which is a thing to do to writing and not a thing to do
+ * with a highlighter.
+ *
+ * Unlike a highlight, a colour must be named. `%%word%%` with nothing in
+ * front of the bar is not a colour anyone chose, and a pair of stray per-cent
+ * signs in a sentence about percentages should stay a pair of per-cent signs.
+ */
+export const INKS = ['amber', 'lime', 'sky', 'rose', 'violet', 'grey'];
 
 /** `[[Title]]` — a reference to another page, by its title. */
 const LINK_OPEN = '[[';
@@ -120,22 +137,33 @@ export function parseInline(text, active = {}, offset = 0) {
     if (mark) {
       const close = text.indexOf(mark.token, i + mark.token.length);
       if (close > i + mark.token.length) {
-        flush();
-        const openAt = offset + i;
         let from = i + mark.token.length;
         let hue = null;
-        // A highlight may name its colour first: `==lime|photosynthesis==`.
-        // The name is drawn as part of the marker rather than as text, so the
-        // line still spells out every character it stores.
-        if (mark.key === 'highlight') {
-          const named = /^([a-z]{3,8})\|/.exec(text.slice(from, close));
-          if (named && HIGHLIGHTS.includes(named[1])) {
-            hue = named[1];
-            from += named[0].length;
-          }
+        let ink = null;
+        // A mark may name a colour first: `==lime|photosynthesis==`, or
+        // `%%rose|the exception%%`. The name is drawn as part of the marker
+        // rather than as text, so the line still spells out every character it
+        // stores. Highlight and colour keep separate fields because a coloured
+        // word inside a highlight has both, and one field would lose one.
+        const named = /^([a-z]{3,8})\|/.exec(text.slice(from, close));
+        if (mark.key === 'highlight' && named && HIGHLIGHTS.includes(named[1])) {
+          hue = named[1];
+          from += named[0].length;
         }
-        out.push({ mark: text.slice(i, from), at: openAt, class: mark.class });
-        const inner = { ...active, [mark.key]: true, ...(hue ? { hue } : {}) };
+        if (mark.key === 'color') {
+          if (!named || !INKS.includes(named[1])) {
+            // Not a colour anyone chose. The per-cent signs are per-cent signs.
+            if (!buffer) bufferAt = offset + i;
+            buffer += text[i];
+            i += 1;
+            continue;
+          }
+          ink = named[1];
+          from += named[0].length;
+        }
+        flush();
+        out.push({ mark: text.slice(i, from), at: offset + i, class: mark.class });
+        const inner = { ...active, [mark.key]: true, ...(hue ? { hue } : {}), ...(ink ? { ink } : {}) };
         if (mark.key === 'code') {
           // Not recursed into: see above.
           if (close > from) out.push({ text: text.slice(from, close), at: offset + from, ...inner });
@@ -229,15 +257,47 @@ export function clozeQuestion(text, which) {
  * dropped, so the rendered text is character-for-character the stored text.
  */
 export function renderInline(text) {
-  let arrowed = false;
+  return renderMarks(text, { arrowed: false });
+}
+
+/**
+ * The same line, with its equations typeset.
+ *
+ * This one deliberately breaks the character-for-character rule above, so it
+ * is only ever used on a line the caret is not in: a rendered equation is a
+ * `contenteditable="false"` island whose text has nothing to do with the
+ * `$x^2$` it stands for, and a caret offset measured across it would be wrong.
+ * The editor paints a line this way at rest and repaints it plain the moment
+ * it takes focus, which is the only reason the offsets can be trusted
+ * everywhere else.
+ *
+ * The maths is lifted out before the emphasis pass for the same reason it is
+ * in the tutor's answers: `$a * b * c$` run through the italic rule first
+ * comes back with the middle eaten.
+ */
+export function renderTypeset(text) {
+  const raw = String(text ?? '');
+  if (!hasMath(raw)) return renderInline(raw);
+  const state = { arrowed: false };
+  const out = [];
+  for (const seg of mathSegments(raw)) {
+    if (seg.type === 'text') { out.push(...renderMarks(seg.value, state)); continue; }
+    const node = el('span', { class: 'em-math', contenteditable: 'false' });
+    renderMath(node, seg.value, { display: false });
+    out.push(node);
+  }
+  return out;
+}
+
+function renderMarks(text, state) {
   return parseInline(text).flatMap((segment) => {
     if (segment.mark) return el('span', { class: 'mk ' + segment.class, text: segment.mark });
     // A card's `::` is drawn as an arrow, RemNote style. The two colons stay in
     // the DOM (only painted over), so caret offsets still match the stored text.
-    if (!arrowed && !segment.code && segment.text) {
+    if (!state.arrowed && !segment.code && segment.text) {
       const match = /(^|\s)::(?=\s|$)/.exec(segment.text);
       if (match) {
-        arrowed = true;
+        state.arrowed = true;
         const at = match.index + match[1].length;
         return [
           ...renderSegment({ ...segment, text: segment.text.slice(0, at) }),
@@ -264,6 +324,9 @@ function renderSegment(segment) {
       // A highlight with no colour named takes the first one, so `==word==`
       // typed out of habit still lands somewhere deliberate.
       segment.highlight ? `em-h hl-${segment.hue ?? HIGHLIGHTS[0]}` : null,
+      // A colour always names itself — the parser refuses the mark otherwise —
+      // so there is no default to fall back to here.
+      segment.ink ? `em-k tx-${segment.ink}` : null,
     ].filter(Boolean);
     if (!classes.length) return document.createTextNode(segment.text);
     // A link and a tag carry what they point at, so a click has something to

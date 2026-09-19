@@ -8,10 +8,11 @@ import { navigate, openBeside } from '../router.js';
 import { topbar, fileCrumbs, pageMenu, fileItems } from '../shell.js';
 import { openMenu } from '../menu.js';
 import { dialog, confirmDelete } from '../dialog.js';
-import { renderInline, toggleMark, caretRange, setCaretRange, inlineClozes, clozeQuestion, stripMarks, HIGHLIGHTS } from '../inline.js';
+import { renderInline, renderTypeset, toggleMark, caretRange, setCaretRange, inlineClozes, clozeQuestion, stripMarks, HIGHLIGHTS, INKS } from '../inline.js';
 import { plural, relative, FILE_ICON, FILE_LABEL } from '../format.js';
 import { deckResolver, parseCard, openCard, syncCard, isCloze, clozeGroups, clozeFace } from '../cards-inline.js';
 import { renderMath, loadKatex } from '../math.js';
+import { highlight, guessLanguage, LANGUAGES, LANGUAGE_ORDER } from '../syntax.js';
 import { canvasPreview } from '../canvas-preview.js';
 import { aiAvailable, generateCards, quizDialog } from '../ai.js';
 import { carriesItem, readItem, dragBlock } from '../dnd.js';
@@ -25,6 +26,38 @@ import { openOcclusionEditor, readOcclusion } from '../occlusion.js';
  * well as the label, so `/h1`, `/todo` and `/yt` land where they should
  * without those words having to be printed on the row.
  */
+/**
+ * The notation a student reaches for, as label, snippet, and how far to walk
+ * the caret back into it. Ordered the way a formula is built: structure first,
+ * then operators, then the Greek and the arrows.
+ */
+const MATH_KEYS = [
+  ['a⁄b', '\\frac{}{}', 3, 'Fraction'],
+  ['x²', '^{}', 1, 'Power'],
+  ['xₙ', '_{}', 1, 'Subscript'],
+  ['√', '\\sqrt{}', 1, 'Square root'],
+  ['∑', '\\sum_{i=1}^{n}', 0, 'Sum'],
+  ['∫', '\\int_{a}^{b}', 0, 'Integral'],
+  ['×', '\\times ', 0, 'Multiply'],
+  ['÷', '\\div ', 0, 'Divide'],
+  ['±', '\\pm ', 0, 'Plus or minus'],
+  ['≤', '\\leq ', 0, 'Less than or equal to'],
+  ['≥', '\\geq ', 0, 'Greater than or equal to'],
+  ['≠', '\\neq ', 0, 'Not equal to'],
+  ['≈', '\\approx ', 0, 'Approximately'],
+  ['→', '\\rightarrow ', 0, 'Gives'],
+  ['⇌', '\\rightleftharpoons ', 0, 'Equilibrium'],
+  ['Δ', '\\Delta ', 0, 'Delta'],
+  ['π', '\\pi ', 0, 'Pi'],
+  ['θ', '\\theta ', 0, 'Theta'],
+  ['λ', '\\lambda ', 0, 'Lambda'],
+  ['∞', '\\infty ', 0, 'Infinity'],
+  ['ā', '\\bar{}', 1, 'Mean'],
+  ['ẋ', '\\dot{}', 1, 'Rate of change'],
+  ['()', '\\left( \\right)', 8, 'Sized brackets'],
+  ['[ ]', '\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}', 0, 'Matrix'],
+];
+
 const BLOCK_TYPES = [
   { type: 'paragraph', icon: 'text-align-left', label: 'Text', keywords: 'paragraph plain body p' },
   { type: 'heading', level: 1, icon: 'text-h-one', label: 'Heading 1', keywords: 'h1 title' },
@@ -47,6 +80,13 @@ const BLOCK_TYPES = [
   { type: 'template', icon: 'stack', label: 'Template', keywords: 'boilerplate reuse insert skeleton starter outline lecture brief' },
   { type: 'divider', icon: 'minus', label: 'Divider', keywords: 'rule line break hr separator' },
 ];
+
+/**
+ * Every coloured run on a line, so that "Remove colour" can take the marks back
+ * out. The name is checked against the same list the parser checks, so a line
+ * about `%%s%%` that the parser left as plain text is left alone here too.
+ */
+const INK_RE = new RegExp(`%%(?:${INKS.join('|')})\\|([^]*?)%%`, 'g');
 
 /**
  * The sites an embed may be framed from.
@@ -390,6 +430,12 @@ export async function documentView(route, host) {
   const status = el('span', { class: 'save-state' }, el('span', { text: `Saved ${relative(doc.updated_at)}` }));
   const dock = el('div', { class: 'doc-dock' });
   const quiz = el('div', { class: 'doc-quiz hidden' });
+  /** The top-bar chip that opens the quiz, kept here so it can show the state. */
+  const quizChip = el('button', {
+    class: 'chip', type: 'button', 'aria-pressed': 'false',
+    title: 'Ask this page back at you',
+    onclick: () => toggleQuiz(),
+  }, icon('cards', { size: 14 }), 'Test this page');
   let quizOpen = false;
   /** The line the caret is in, so the format bar has something to act on. */
   let focusedId = null;
@@ -1200,12 +1246,17 @@ export async function documentView(route, host) {
       item('text-italic', 'Italic', () => applyMark('italic'), { compact: true, tier: 3, title: 'Italic (⌘I)', disabled }),
       item('highlighter-circle', 'Highlight', (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        openMenu({ x: rect.left, y: rect.top - 8, anchorBottom: true },
-          HIGHLIGHTS.map((hue) => ({
-            icon: 'highlighter-circle',
+        // A row of colours rather than a list of colour names: picking a
+        // highlighter is a thing the eye does, and reading the word "amber" to
+        // find out what amber looks like is the slow way round.
+        openMenu({ x: rect.left, y: rect.top - 8, anchorBottom: true }, [
+          { head: 'Highlight' },
+          { swatches: HIGHLIGHTS.map((hue) => ({
+            class: `sw-hl hl-${hue}`,
             label: colorLabel(hue),
             onSelect: () => applyHighlight(hue),
-          })));
+          })) },
+        ]);
       }, {
         compact: true, caret: true, tier: 2, title: 'Highlight (⌘⇧H)', disabled,
         rows: HIGHLIGHTS.map((hue) => ({
@@ -1213,6 +1264,28 @@ export async function documentView(route, host) {
           label: `Highlight ${colorLabel(hue).toLowerCase()}`,
           onSelect: () => applyHighlight(hue),
         })),
+      }),
+      item('palette', 'Colour', (e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        openMenu({ x: rect.left, y: rect.top - 8, anchorBottom: true }, [
+          { head: 'Text colour' },
+          { swatches: INKS.map((ink) => ({
+            class: `sw-ink tx-${ink}`,
+            label: colorLabel(ink),
+            onSelect: () => applyInk(ink),
+          })) },
+          { icon: 'eraser', label: 'Remove colour', onSelect: () => applyInk(null) },
+        ]);
+      }, {
+        compact: true, caret: true, tier: 2, title: 'Colour the text', disabled,
+        rows: [
+          ...INKS.map((ink) => ({
+            icon: 'palette',
+            label: `Colour ${colorLabel(ink).toLowerCase()}`,
+            onSelect: () => applyInk(ink),
+          })),
+          { icon: 'eraser', label: 'Remove colour', onSelect: () => applyInk(null) },
+        ],
       }),
       item('brackets-curly', 'Cloze', () => wrapSelection('{', '}', { placeholder: 'answer' }), {
         compact: true, tier: 2, title: 'Cloze: hide this as a blank — it becomes a card (⌘⇧C)', disabled,
@@ -1227,6 +1300,7 @@ export async function documentView(route, host) {
           { icon: 'check-square', label: 'Todo', on: current?.type === 'todo', onSelect: () => convert({ type: 'todo' }) },
           { icon: 'table', label: 'Table', onSelect: () => insert({ type: 'table' }) },
           { icon: 'image', label: 'Image', onSelect: () => pickImage() },
+          { icon: 'columns', label: 'Columns', onSelect: () => insert({ type: 'columns' }) },
           ...MORE.map((m) => ({ icon: m.glyph, label: m.label, on: matches(current, m.spec), onSelect: () => convert(m.spec) })),
           { sep: true },
           disabled ? null : { icon: 'text-underline', label: 'Underline', kbd: '⌘U', onSelect: () => applyMark('underline') },
@@ -1363,10 +1437,29 @@ export async function documentView(route, host) {
       spellcheck: 'true',
       'data-placeholder': placeholder,
     });
-    node.replaceChildren(...renderInline(value ?? ''));
+    // A line at rest shows its equations typeset; a line with the caret in it
+    // shows its own text, character for character, because every caret offset
+    // in this editor is an offset into that text. The swap happens on the way
+    // in and on the way out, so nothing measures an offset across a rendered
+    // equation — see renderTypeset in inline.js.
+    let raw = value ?? '';
+    const paintRest = () => {
+      node.replaceChildren(...renderTypeset(raw));
+      node.dataset.typeset = '1';
+    };
+    const paintEdit = () => {
+      if (!node.dataset.typeset) return;
+      delete node.dataset.typeset;
+      node.replaceChildren(...renderInline(raw));
+    };
+    paintRest();
 
-    node.addEventListener('input', () => onInput(node.textContent));
+    node.addEventListener('input', () => { raw = node.textContent; onInput(raw); });
+    // Before the browser places the caret, so it lands in the plain line
+    // rather than beside an equation that is about to be taken away.
+    node.addEventListener('pointerdown', paintEdit);
     node.addEventListener('focus', () => {
+      paintEdit();
       const owner = node.closest('[data-block]')?.dataset.block ?? null;
       if (owner === focusedId) return;
       focusedId = owner;
@@ -1375,8 +1468,8 @@ export async function documentView(route, host) {
     // Typing must not redraw the line under the caret, so the emphasis is
     // rebuilt once the caret has gone somewhere else.
     node.addEventListener('blur', () => {
-      const raw = node.textContent;
-      node.replaceChildren(...renderInline(raw));
+      raw = node.textContent;
+      paintRest();
       const owner = node.closest('[data-block]')?.dataset.block ?? null;
       if (owner) syncLine(owner);
     });
@@ -1502,6 +1595,45 @@ export async function documentView(route, host) {
     if (!inner) { toast('Select the words to highlight first.'); return; }
     node.textContent = `${raw.slice(0, at.start)}==${prefix}${inner}==${raw.slice(at.end)}`;
     setCaretRange(node, at.start + 2 + prefix.length, at.start + 2 + prefix.length + inner.length);
+    replace(index, { ...blocks[index], text: node.textContent });
+  }
+
+  /**
+   * The colour of the words themselves, written as `%%rose|like this%%`.
+   *
+   * Beside the highlighter rather than inside it, because the two do different
+   * jobs: a highlight says "come back to this", a colour says "this is a
+   * definition" or "this is the exception". Kept to the same five names so a
+   * page has one vocabulary of colour, plus grey for the line that matters
+   * less — which is a thing to do to writing, not a thing to do with a pen.
+   *
+   * Passing `null` takes the colour off the line. Colour is the one mark people
+   * apply and then think better of, and hunting the two pairs of per-cent signs
+   * by hand is not an edit anybody should have to make.
+   */
+  function applyInk(ink) {
+    const index = blocks.findIndex((b) => b.id === focusedId);
+    if (index === -1 || !formattable(blocks[index])) return;
+    const node = page.querySelector(`[data-block="${focusedId}"] .btext`);
+    if (!node) return;
+
+    const raw = node.textContent;
+    const at = caretRange(node) ?? { start: raw.length, end: raw.length };
+
+    if (!ink) {
+      const bare = raw.replace(INK_RE, '$1');
+      if (bare === raw) { toast('No colour on this line.'); return; }
+      node.textContent = bare;
+      setCaretRange(node, bare.length, bare.length);
+      replace(index, { ...blocks[index], text: bare });
+      return;
+    }
+
+    const inner = raw.slice(at.start, at.end);
+    if (!inner) { toast('Select the words to colour first.'); return; }
+    const open = `%%${ink}|`;
+    node.textContent = `${raw.slice(0, at.start)}${open}${inner}%%${raw.slice(at.end)}`;
+    setCaretRange(node, at.start + open.length, at.start + open.length + inner.length);
     replace(index, { ...blocks[index], text: node.textContent });
   }
 
@@ -1632,7 +1764,7 @@ export async function documentView(route, host) {
         return wrap(el('div', { class: 'divider-block' }));
 
       case 'code':
-        return wrap(editable(block.text, 'Code', (text) => replace(index, { ...block, text }), null));
+        return wrap(renderCode(block, index));
 
       case 'math':
         return wrap(renderEquation(block, index));
@@ -1774,7 +1906,7 @@ export async function documentView(route, host) {
         if (!lines.length) { mount(body, el('span', { class: 'dim', text: 'Nothing there yet.' })); return; }
         mount(body, lines.map((line) => {
           const row = el('div', { class: 'portal-line' });
-          row.replaceChildren(...renderInline(line));
+          row.replaceChildren(...renderTypeset(line));
           return row;
         }));
       })
@@ -3022,6 +3154,126 @@ export async function documentView(route, host) {
   }
 
   /**
+   * A code block: a language, the code, and a way to take it away with you.
+   *
+   * Highlighting follows the rule the rest of the editor follows. The colours
+   * are a tree of spans, and the tree only exists while the caret is somewhere
+   * else — on the way in the block repaints as one flat run of text, so every
+   * offset on screen is an offset into the stored string and nothing has to be
+   * mapped back through a token. See editable() above, and renderTypeset.
+   *
+   * Tab indents rather than leaving the block, which is what Tab means inside
+   * code and nowhere else in this editor. The escape route is the same as any
+   * other block's: click out, or ⌘↩.
+   */
+  function renderCode(block, index) {
+    let raw = block.text ?? '';
+    let language = block.language && LANGUAGES[block.language] ? block.language : 'plain';
+    // A language the writer picked is never second-guessed; one we guessed at
+    // is re-guessed as the code grows, because the first line of a paste is
+    // rarely enough to tell Java from C.
+    let chosen = Boolean(block.language);
+
+    const code = el('div', {
+      class: 'btext code-source',
+      contenteditable: 'plaintext-only',
+      spellcheck: 'false',
+      'data-placeholder': 'Write or paste code',
+    });
+
+    const paintRest = () => {
+      code.replaceChildren(...highlight(raw, language));
+      code.dataset.lit = '1';
+    };
+    const paintEdit = () => {
+      if (!code.dataset.lit) return;
+      delete code.dataset.lit;
+      code.textContent = raw;
+    };
+    paintRest();
+
+    const picker = dropdown({
+      class: 'code-lang',
+      title: 'Language',
+      onchange: () => {
+        language = picker.value;
+        chosen = language !== 'plain';
+        replace(index, { ...blocks[index], language: chosen ? language : null });
+        if (code.dataset.lit) paintRest();
+      },
+    }, LANGUAGE_ORDER.map((id) => el('option', { value: id, text: LANGUAGES[id].label })));
+    picker.value = language;
+
+    const copy = el('button', {
+      class: 'code-act',
+      title: 'Copy this code',
+      onclick: async () => {
+        try {
+          await navigator.clipboard.writeText(raw);
+          toast('Code copied.');
+        } catch {
+          toast('Could not reach the clipboard.', 'error');
+        }
+      },
+    }, icon('copy', { size: 13 }));
+
+    /* Two spaces, not a tab character: a tab renders at whatever width the
+       next program decides, and code pasted out of here should look the way it
+       looked going in. execCommand keeps it on the undo stack. */
+    const indent = () => document.execCommand('insertText', false, '  ');
+    const outdent = () => {
+      const sel = window.getSelection();
+      if (!sel?.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      const node = range.startContainer;
+      if (node.nodeType !== Node.TEXT_NODE) return;
+      const at = range.startOffset;
+      const before = node.textContent.slice(0, at);
+      const strip = before.endsWith('  ') ? 2 : before.endsWith(' ') ? 1 : 0;
+      if (!strip) return;
+      range.setStart(node, at - strip);
+      range.setEnd(node, at);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('delete');
+    };
+
+    code.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab' || e.metaKey || e.ctrlKey) return;
+      e.preventDefault();
+      if (e.shiftKey) outdent(); else indent();
+    });
+
+    code.addEventListener('input', () => {
+      raw = code.textContent;
+      replace(index, { ...blocks[index], text: raw });
+    });
+    code.addEventListener('pointerdown', paintEdit);
+    code.addEventListener('focus', () => {
+      paintEdit();
+      focusedId = block.id;
+      drawDock();
+    });
+    code.addEventListener('blur', () => {
+      raw = code.textContent;
+      if (!chosen) {
+        const guess = guessLanguage(raw);
+        if (guess && guess !== language) {
+          language = guess;
+          picker.value = guess;
+          replace(index, { ...blocks[index], language: guess });
+        }
+      }
+      paintRest();
+    });
+
+    return el('div', { class: 'code-block', dataset: { lang: language } },
+      el('div', { class: 'code-bar' }, picker, el('span', { class: 'spacer' }), copy),
+      code,
+    );
+  }
+
+  /**
    * An equation: LaTeX on one side, the typeset result on the other.
    *
    * Both are on screen at once rather than behind a toggle. Maths is written
@@ -3065,7 +3317,35 @@ export async function documentView(route, host) {
     caption.addEventListener('input', () =>
       replace(index, { ...blocks[index], caption: caption.textContent.slice(0, 500) || null }));
 
-    return el('figure', { class: 'math-block' }, output, source, caption);
+    return el('figure', { class: 'math-block' }, output, source, mathKeys(source), caption);
+  }
+
+  /**
+   * What to press when you know the maths but not the LaTeX.
+   *
+   * Every entry writes the notation out in full, brackets and all, and leaves
+   * the caret in the first hole — so \\frac lands as a fraction with the
+   * numerator waiting, not as six characters to finish by hand. The strip is
+   * only on screen while the equation has the caret in it; a page being read
+   * has no use for it.
+   */
+  function mathKeys(source) {
+    const insert = (snippet, back = 0) => {
+      source.focus();
+      document.execCommand('insertText', false, snippet);
+      const sel = window.getSelection();
+      // Nudging the caret into the hole is a convenience, not the point — if
+      // the browser will not do it the snippet is still correct.
+      try { for (let i = 0; i < back; i += 1) sel.modify('move', 'backward', 'character'); } catch { /* fine */ }
+    };
+    return el('div', { class: 'math-keys' }, MATH_KEYS.map(([label, snippet, back, title]) =>
+      el('button', {
+        class: 'math-key',
+        title: title ?? snippet,
+        // Keeps the caret in the source, so the snippet has somewhere to land.
+        onmousedown: (e) => e.preventDefault(),
+        onclick: () => insert(snippet, back),
+      }, label)));
   }
 
   function renderFlashcard(block, index) {
@@ -3205,15 +3485,22 @@ export async function documentView(route, host) {
    * the worst possible moment. The cards made deliberately — with the card
    * tag, or `⌘⇧C` — are the ones that are scheduled.
    */
+  function syncQuizChip() {
+    quizChip.classList.toggle('on', quizOpen);
+    quizChip.setAttribute('aria-pressed', String(quizOpen));
+  }
+
   function toggleQuiz() {
     quizOpen = !quizOpen;
     quiz.classList.toggle('hidden', !quizOpen);
+    syncQuizChip();
     if (!quizOpen) { mount(quiz); return; }
 
     const items = quizItems();
     if (!items.length) {
       quizOpen = false;
       quiz.classList.add('hidden');
+      syncQuizChip();
       toast('Nothing on this page can be asked back yet. Write a card with :: , a {blank}, or cover a label on a picture.');
       return;
     }
@@ -3706,10 +3993,13 @@ export async function documentView(route, host) {
     topbar(fileCrumbs(file),
       status,
       el('button', { class: 'chip', type: 'button', title: 'Import a file into this page', onclick: () => importIntoDocument() }, icon('file-arrow-up', { size: 14 }), 'Import'),
+      // Testing a page you have just written is the thing this screen is for,
+      // and a menu is where a habit goes to die. It sits beside Import as a
+      // chip of its own, and keeps its pressed state so it reads as a mode.
+      quizChip,
       // Everything else a page can do is in one menu: a row of chips is what
       // stopped a document fitting in half a window.
       pageMenu(() => [
-        { icon: 'cards', label: 'Test this page', onSelect: () => toggleQuiz() },
         aiOn ? {
           icon: 'question', label: 'Quiz me with AI',
           onSelect: () => quizDialog({ source: { from: 'document', fileId: file.id }, label: `“${file.title}”` }),

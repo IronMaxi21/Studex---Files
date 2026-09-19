@@ -11,7 +11,10 @@
 import { el, svg, icon, mount } from './dom.js';
 import { api } from './api.js';
 import { state, toast, reportError } from './store.js';
+import { navigate } from './router.js';
 import { mmss } from './format.js';
+import { playSoundscape, stopSoundscape, duckSoundscape, SOUNDSCAPES, soundscapeLabel } from './soundscape.js';
+import { isNative, setFocusState } from './native.js';
 
 const PREFS_KEY = 'studex.focus-prefs';
 
@@ -25,6 +28,13 @@ export const FOCUS_DEFAULTS = {
   hideSidebar: true,
   autoContinue: false, // start the next block when a break ends
   subjectId: '',
+  /* Background sound. `sound` is what is playing now and `soundLast` is what
+     the speaker button turns back on, so muting mid-block does not lose the
+     choice of rain over waves. */
+  sound: 'off',
+  soundLast: 'rain',
+  soundVolume: 45,     // % of the synthesiser's own headroom
+  soundBreak: true,    // keep it playing through the break
 };
 
 export function focusPrefs() {
@@ -33,6 +43,7 @@ export function focusPrefs() {
 
 export function setFocusPrefs(patch) {
   const next = { ...focusPrefs(), ...patch };
+  if (patch.sound && patch.sound !== 'off') next.soundLast = patch.sound;
   try { localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch { /* this sitting only */ }
   if (phase === 'idle') cycle = { index: 1, total: next.cycles };
   applyLook();
@@ -60,7 +71,48 @@ let blocks = [];
 const listeners = new Set();
 
 export function onFocusChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
-function emit() { for (const fn of listeners) { try { fn(focusState()); } catch { /* one listener is not all of them */ } } drawChrome(); }
+function emit() { syncSound(); syncMenuBar(); for (const fn of listeners) { try { fn(focusState()); } catch { /* one listener is not all of them */ } } drawChrome(); }
+
+/**
+ * Tells the menu bar what the timer is doing.
+ *
+ * Only when something actually changed: emit() runs on state changes, not on
+ * the half-second tick, and the end time is sent rather than the seconds left
+ * so the menu bar can run its own clock. The same state reaches it twice when
+ * two windows are open, which is harmless — it is one item, not one per
+ * window, and both windows are describing the same session.
+ */
+let sentFocus = '';
+function syncMenuBar() {
+  if (!isNative) return;
+  const endsAt = phase === 'idle' || session?.status === 'paused' ? 0 : Date.now() + remainingSeconds() * 1000;
+  const status = phase === 'idle' ? '' : (session?.status ?? (phase === 'break' ? 'break' : 'between'));
+  // Rounded to the second before comparing, or a resumed timer would look
+  // different on every pass and post a message each time.
+  const key = [phase, status, Math.round(endsAt / 1000), plan.goal].join('|');
+  if (key === sentFocus) return;
+  sentFocus = key;
+  setFocusState({ phase, status, endsAt, goal: plan.goal, remaining: remainingSeconds() });
+}
+
+/**
+ * Brings the background sound in line with what the timer is doing.
+ *
+ * Driven from state rather than from each button, because there are six ways
+ * into a phase — pressing start, a block running out, a break ending, auto
+ * continue, another window, a reload — and a sound that only stops when you
+ * press stop is a sound that gets left playing. Starting is idempotent: called
+ * with what is already on, it does nothing but adjust the level.
+ */
+function syncSound() {
+  const prefs = focusPrefs();
+  const wanted = phase === 'focus' || (phase === 'break' && prefs.soundBreak);
+  if (!wanted || prefs.sound === 'off') { stopSoundscape(); return; }
+  playSoundscape(prefs.sound, prefs.soundVolume / 100);
+  // A paused timer is not silence — you are still sitting there — but it
+  // should not sound like work is happening.
+  duckSoundscape(phase === 'focus' && session?.status === 'paused');
+}
 
 export function remainingSeconds() {
   if (phase === 'break') return Math.max(0, Math.round((breakEndsAt - Date.now()) / 1000));
@@ -314,13 +366,6 @@ function overlayBody() {
     onclick: () => setFocusPrefs({ minutes: m }),
   })));
 
-  const stepper = (label, key, min, max, step, unit) => el('div', { class: 'focus-stepper' },
-    el('span', { text: label }),
-    el('button', { title: `Less ${label.toLowerCase()}`, onclick: () => setFocusPrefs({ [key]: Math.max(min, prefs[key] - step) }) }, icon('minus', { size: 12 })),
-    el('b', { text: `${prefs[key]}${unit}` }),
-    el('button', { title: `More ${label.toLowerCase()}`, onclick: () => setFocusPrefs({ [key]: Math.min(max, prefs[key] + step) }) }, icon('plus', { size: 12 })),
-  );
-
   const subjectPicker = el('select', {
     class: 'focus-select', 'aria-label': 'Subject',
     onchange: (event) => setFocusPrefs({ subjectId: event.target.value }),
@@ -361,26 +406,6 @@ function overlayBody() {
            el('button', { class: 'focus-btn', title: 'Finish this block now and log it', onclick: () => endFocus({ completed: true }) }, icon('check', { size: 16 }), 'Done'),
            el('button', { class: 'focus-btn', title: 'Stop and log the time so far', onclick: () => endFocus() }, icon('stop', { size: 16 }), 'Stop')];
 
-  const look = el('div', { class: 'focus-look' },
-    el('label', { class: 'focus-toggle' },
-      el('input', { type: 'checkbox', checked: prefs.blur, onchange: (e) => setFocusPrefs({ blur: e.target.checked }) }), 'Blur Studex'),
-    el('input', {
-      type: 'range', min: 2, max: 40, value: prefs.blurStrength, disabled: !prefs.blur, 'aria-label': 'Blur strength',
-      oninput: (e) => { document.documentElement.style.setProperty('--focus-blur', `${e.target.value}px`); },
-      onchange: (e) => setFocusPrefs({ blurStrength: Number(e.target.value) }),
-    }),
-    el('label', { class: 'focus-toggle', text: 'Dim' }),
-    el('input', {
-      type: 'range', min: 0, max: 90, value: prefs.dim, 'aria-label': 'Dim',
-      oninput: (e) => { document.documentElement.style.setProperty('--focus-dim', `${e.target.value}%`); },
-      onchange: (e) => setFocusPrefs({ dim: Number(e.target.value) }),
-    }),
-    el('label', { class: 'focus-toggle' },
-      el('input', { type: 'checkbox', checked: prefs.hideSidebar, onchange: (e) => setFocusPrefs({ hideSidebar: e.target.checked }) }), 'Hide sidebar'),
-    el('label', { class: 'focus-toggle' },
-      el('input', { type: 'checkbox', checked: prefs.autoContinue, onchange: (e) => setFocusPrefs({ autoContinue: e.target.checked }) }), 'Auto-start next block'),
-  );
-
   return el('div', { class: 'focus-panel' },
     el('div', { class: 'focus-top' },
       el('span', { class: 'focus-eyebrow', text: eyebrow }),
@@ -400,14 +425,29 @@ function overlayBody() {
     goalLine,
     phase === 'idle' ? goalInput : null,
     phase === 'idle' ? presets : null,
-    phase === 'idle' ? el('div', { class: 'focus-settings-row' },
-      stepper('Break', 'breakMinutes', 1, 30, 1, 'm'),
-      stepper('Blocks', 'cycles', 1, 12, 1, ''),
-      subjectPicker,
-      blockPicker,
-    ) : null,
+    phase === 'idle' ? el('div', { class: 'focus-settings-row' }, subjectPicker, blockPicker) : null,
     el('div', { class: 'focus-controls' }, controls),
-    look,
-    el('div', { class: 'focus-hint', text: 'Esc to minimise · ⌘⇧F to bring back' }),
+    el('div', { class: 'focus-foot' },
+      el('span', { class: 'focus-hint', text: `${prefs.breakMinutes}m break · ${prefs.cycles} blocks · Esc to minimise` }),
+      // Sound is the one preference that belongs here as well: whether you
+      // want rain right now is a decision about this block, not a setting, and
+      // it is the thing most likely to want turning off in a hurry. Which
+      // sound, and how loud, stays in Settings.
+      (() => {
+        const on = prefs.sound !== 'off';
+        return el('button', {
+          class: 'focus-icon' + (on ? ' on' : ''),
+          title: on ? `Background sound: ${soundscapeLabel(prefs.sound)}` : 'Background sound off',
+          'aria-pressed': on ? 'true' : 'false',
+          onclick: () => setFocusPrefs({ sound: on ? 'off' : (prefs.soundLast || 'rain') }),
+        }, icon(on ? 'speaker-high' : 'speaker-simple-slash', { size: 16 }));
+      })(),
+      // Everything that is a preference rather than a decision about this
+      // session lives in Settings. The overlay is for starting and stopping.
+      el('button', {
+        class: 'focus-icon', title: 'Focus settings',
+        onclick: () => { setExpanded(false); navigate('settings/focus'); },
+      }, icon('sliders-horizontal', { size: 16 })),
+    ),
   );
 }

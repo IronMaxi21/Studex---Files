@@ -206,7 +206,11 @@ final class WebViewController: NSViewController {
         // a page doing something unintended.
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
 
-        if ProcessInfo.processInfo.environment["STUDEX_DEBUG"] == "1" {
+        // The web inspector opens the whole UI, and its console can call the
+        // bridge. It needs both an explicit ask and a build of ours: in a
+        // release build STUDEX_DEBUG is just an environment variable anyone
+        // could set before launching the app.
+        if Paths.isDeveloperBuild, ProcessInfo.processInfo.environment["STUDEX_DEBUG"] == "1" {
             configuration.preferences.setValue(true, forKey: "developerExtrasEnabled")
         }
 
@@ -332,6 +336,12 @@ final class WebViewController: NSViewController {
 
     /// Where the page is, as the page last reported it.
     private var route = "home"
+
+    /// Consecutive failed loads, and how many are absorbed silently before the
+    /// person is told. Four attempts spans about six seconds, which is longer
+    /// than any restart of the backend takes.
+    private var loadAttempts = 0
+    private static let loadAttemptLimit = 4
 
     private func url(for route: String) -> URL {
         guard !route.isEmpty, route != "home",
@@ -524,27 +534,62 @@ extension WebViewController: WKNavigationDelegate {
         download.delegate = self
     }
 
+    /// A load that worked clears the retry count: the next failure is a new
+    /// incident and gets its own patience.
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        loadAttempts = 0
+    }
+
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        presentLoadFailure(error)
+        handleLoadFailure(error)
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        presentLoadFailure(error)
+        handleLoadFailure(error)
     }
 
-    private func presentLoadFailure(_ error: Error) {
+    /**
+     The page did not load.
+
+     Nearly always this is a moment, not a fault: the backend is between
+     processes, or the port answered a fraction of a second before it was
+     listening. Asking somebody to click Try Again for that is asking them to
+     do the app's job, so it tries again itself, a few times, quickly — and only
+     when the page genuinely will not come back does it say anything, still
+     without making Quit the only way out.
+     */
+    private func handleLoadFailure(_ error: Error) {
         // A navigation this code cancelled on purpose is not a failure.
         if (error as NSError).code == NSURLErrorCancelled { return }
-        guard let window = view.window else { return }
 
+        loadAttempts += 1
+        if loadAttempts <= Self.loadAttemptLimit {
+            let delay = 0.4 * pow(2, Double(loadAttempts - 1))
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.reload() }
+            return
+        }
+
+        guard let window = view.window else { return }
         let alert = NSAlert()
         alert.messageText = "Studex could not load its interface."
         alert.informativeText = error.localizedDescription
         alert.addButton(withTitle: "Try Again")
         alert.addButton(withTitle: "Quit")
         alert.beginSheetModal(for: window) { [weak self] response in
-            if response == .alertFirstButtonReturn { self?.reload() } else { NSApp.terminate(nil) }
+            guard response == .alertFirstButtonReturn else { NSApp.terminate(nil); return }
+            self?.loadAttempts = 0
+            self?.reload()
         }
+    }
+
+    /**
+     WebKit's renderer died — usually out of memory, on a canvas or a long PDF.
+
+     The window is left blank and completely inert, which reads as the whole app
+     having crashed; reloading it puts the page back on the route it was on.
+     */
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        reload()
     }
 }
 
@@ -732,6 +777,21 @@ extension WebViewController: WKScriptMessageHandler {
         case "next-lesson":
             // Beside the due count in the menu bar; nil when the day is done.
             StatusBar.shared.update(lesson: body["title"] as? String)
+        case "study-progress":
+            // What has been done today, under the count of what has not.
+            StatusBar.shared.update(
+                reviewed: (body["reviewed"] as? NSNumber)?.intValue ?? 0,
+                streak: (body["streak"] as? NSNumber)?.intValue ?? 0)
+        case "focus-state":
+            // The timer, so a block can be paused or ended without finding the
+            // window. The page sends the moment the block ends rather than the
+            // seconds left, and the menu bar counts down from it on its own.
+            StatusBar.shared.update(focus: FocusSnapshot(
+                phase: body["phase"] as? String ?? "idle",
+                status: body["status"] as? String ?? "",
+                endsAt: (body["endsAt"] as? NSNumber)?.doubleValue ?? 0,
+                remaining: (body["remaining"] as? NSNumber)?.intValue ?? 0,
+                goal: body["goal"] as? String ?? ""))
         case "lock-state":
             reportLock()
         case "set-lock":

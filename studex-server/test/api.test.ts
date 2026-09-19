@@ -14,6 +14,7 @@ import {
   uuid,
   type Client,
 } from './helpers.js';
+import { snapshotFile } from '../src/domain/revisions.js';
 
 let alice: Client;
 let bob: Client;
@@ -66,18 +67,21 @@ describe('authentication', () => {
   });
 
   it('signs in with the right password and rejects the wrong one', async () => {
+    // A throwaway account: an account holds one live session, so signing in
+    // as alice here would sign the rest of this file out.
+    const signer = await registerUser('Sign In Tester');
     const app = await getApp();
     const ok = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: alice.email, password: 'a-perfectly-fine-passphrase' },
+      payload: { email: signer.email, password: 'a-perfectly-fine-passphrase' },
     });
     assert.equal(ok.statusCode, 200);
 
     const bad = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: alice.email, password: 'not-the-right-password' },
+      payload: { email: signer.email, password: 'not-the-right-password' },
     });
     assert.equal(bad.statusCode, 401);
   });
@@ -149,11 +153,12 @@ describe('authentication', () => {
   });
 
   it('sets the session cookie httpOnly and the csrf cookie readable', async () => {
+    const cookieUser = await registerUser('Cookie Tester');
     const app = await getApp();
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: alice.email, password: 'a-perfectly-fine-passphrase' },
+      payload: { email: cookieUser.email, password: 'a-perfectly-fine-passphrase' },
     });
     const cookies = res.cookies as { name: string; httpOnly?: boolean; sameSite?: string }[];
     const session = cookies.find((c) => c.name === 'studex_session')!;
@@ -174,21 +179,55 @@ describe('authentication', () => {
     });
     const secondToken = second.json().token;
 
-    const change = await api(victim, {
-      method: 'POST',
-      url: '/api/auth/change-password',
-      payload: {
-        currentPassword: 'a-perfectly-fine-passphrase',
-        newPassword: 'a-brand-new-passphrase-here',
+    const change = await api(
+      { ...victim, token: secondToken },
+      {
+        method: 'POST',
+        url: '/api/auth/change-password',
+        payload: {
+          currentPassword: 'a-perfectly-fine-passphrase',
+          newPassword: 'a-brand-new-passphrase-here',
+        },
       },
-    });
+    );
     assert.equal(change.statusCode, 204);
 
-    const stale = await api({ ...victim, token: secondToken }, { method: 'GET', url: '/api/auth/me' });
+    const stale = await api(victim, { method: 'GET', url: '/api/auth/me' });
     assert.equal(stale.statusCode, 401, 'the other device is signed out');
 
-    const current = await api(victim, { method: 'GET', url: '/api/auth/me' });
+    const current = await api({ ...victim, token: secondToken }, { method: 'GET', url: '/api/auth/me' });
     assert.equal(current.statusCode, 200, 'the device that changed it stays signed in');
+  });
+
+  it('keeps one live session per account, so a login elsewhere ends this one', async () => {
+    const shared = await registerUser('Shared Login');
+    const app = await getApp();
+
+    const before = await api(shared, { method: 'GET', url: '/api/auth/me' });
+    assert.equal(before.statusCode, 200);
+
+    const elsewhere = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: shared.email, password: 'a-perfectly-fine-passphrase' },
+    });
+    assert.equal(elsewhere.statusCode, 200);
+    assert.equal(elsewhere.json().signedOutElsewhere, 1, 'the first device is told about');
+
+    const after = await api(shared, { method: 'GET', url: '/api/auth/me' });
+    assert.equal(after.statusCode, 401, 'the first device is signed out');
+    assert.equal(
+      after.json().error.code,
+      'session_replaced',
+      'and is told why, rather than blaming an expiry',
+    );
+
+    const second = { ...shared, token: elsewhere.json().token };
+    const live = await api(second, { method: 'GET', url: '/api/auth/me' });
+    assert.equal(live.statusCode, 200, 'the newest device keeps working');
+
+    const sessions = await api(second, { method: 'GET', url: '/api/auth/sessions' });
+    assert.equal(sessions.json().sessions.length, 1, 'one device is listed');
   });
 
   it('invalidates the session after logout', async () => {
@@ -748,6 +787,78 @@ describe('documents', () => {
 });
 
 /* -------------------------------------------------------------------------- */
+
+describe('earlier versions of a file', () => {
+  let fileId: string;
+
+  before(async () => {
+    fileId = (
+      await api(alice, {
+        method: 'POST',
+        url: '/api/files',
+        payload: { title: 'Titration method', kind: 'doc' },
+      })
+    ).json().file.id;
+    await api(alice, {
+      method: 'PUT',
+      url: `/api/documents/${fileId}`,
+      payload: { blocks: [{ id: uuid(), type: 'paragraph', text: 'Rinse with the solution.' }] },
+    });
+  });
+
+  it('has nothing to show until something replaces the file', async () => {
+    const res = await api(alice, { method: 'GET', url: `/api/files/${fileId}/revisions` });
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json().revisions, []);
+  });
+
+  it('puts an earlier version back, keeping the current one behind it', async () => {
+    await snapshotFile(alice.userId, { id: fileId, kind: 'doc' } as never, 'sync');
+
+    await api(alice, {
+      method: 'PUT',
+      url: `/api/documents/${fileId}`,
+      payload: {
+        blocks: [{ id: uuid(), type: 'paragraph', text: 'Rinse with distilled water.' }],
+      },
+    });
+
+    const listed = await api(alice, { method: 'GET', url: `/api/files/${fileId}/revisions` });
+    assert.equal(listed.json().revisions.length, 1);
+    const [kept] = listed.json().revisions;
+    assert.equal(kept.reason, 'sync');
+
+    const restored = await api(alice, {
+      method: 'POST',
+      url: `/api/files/${fileId}/revisions/${kept.id}/restore`,
+    });
+    assert.equal(restored.statusCode, 200);
+    // The state it replaced is kept too, so the restore can itself be undone.
+    assert.deepEqual(
+      restored
+        .json()
+        .revisions.map((r: { reason: string }) => r.reason)
+        .sort(),
+      ['restore', 'sync'],
+    );
+
+    const doc = await api(alice, { method: 'GET', url: `/api/documents/${fileId}` });
+    assert.equal(doc.json().document.blocks[0].text, 'Rinse with the solution.');
+  });
+
+  it('keeps one account out of another account\'s versions', async () => {
+    const res = await api(bob, { method: 'GET', url: `/api/files/${fileId}/revisions` });
+    assert.equal(res.statusCode, 404);
+  });
+
+  it('refuses a version that is no longer kept', async () => {
+    const res = await api(alice, {
+      method: 'POST',
+      url: `/api/files/${fileId}/revisions/${uuid()}/restore`,
+    });
+    assert.equal(res.statusCode, 404);
+  });
+});
 
 describe('canvas', () => {
   let canvasId: string;

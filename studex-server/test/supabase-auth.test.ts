@@ -331,13 +331,15 @@ describe('who Studex thinks is asking', () => {
       password: 'correct-horse-battery-staple',
       displayName: 'Rotating',
     });
+    // Signing in here already ends the registration session: an account holds
+    // one live session. The change is therefore made from the newer device.
     const other = await post('/api/auth/login', { email, password: 'correct-horse-battery-staple' });
 
     const app = await getApp();
     const changed = await app.inject({
       method: 'POST',
       url: '/api/auth/change-password',
-      headers: { authorization: `Bearer ${first.json().token}` },
+      headers: { authorization: `Bearer ${other.json().token}` },
       payload: {
         currentPassword: 'correct-horse-battery-staple',
         newPassword: 'an-entirely-different-passphrase',
@@ -353,14 +355,14 @@ describe('who Studex thinks is asking', () => {
     const staleDevice = await app.inject({
       method: 'GET',
       url: '/api/auth/me',
-      headers: { authorization: `Bearer ${other.json().token}` },
+      headers: { authorization: `Bearer ${first.json().token}` },
     });
     assert.equal(staleDevice.statusCode, 401);
 
     const stillHere = await app.inject({
       method: 'GET',
       url: '/api/auth/me',
-      headers: { authorization: `Bearer ${first.json().token}` },
+      headers: { authorization: `Bearer ${other.json().token}` },
     });
     assert.equal(stillHere.statusCode, 200, 'the device that made the change keeps its session');
   });

@@ -29,4 +29,39 @@
   } catch {
     document.documentElement.dataset.contrast = 'normal';
   }
+  // The visual family changes the ground, the corners and the typeface, so it
+  // has to be settled before the first paint for the same reason the theme
+  // does — otherwise the app opens in Nocturne and re-draws into Organic.
+  try {
+    const family = localStorage.getItem('studex.themeFamily');
+    document.documentElement.dataset.themeFamily =
+      family === 'organic' || family === 'glass' ? family : 'default';
+    // The frosted family is glass by definition; the toggle only speaks for
+    // the other two.
+    // Reduce Transparency is a system-wide answer, so it settles this before
+    // the in-app toggle gets a say — and before the first paint, or the app
+    // opens frosted and then turns solid in front of someone who asked it not
+    // to be frosted at all.
+    const opaque = window.matchMedia('(prefers-reduced-transparency: reduce)').matches;
+    document.documentElement.dataset.glass =
+      !opaque && (family === 'glass' || localStorage.getItem('studex.glass') !== 'off') ? 'on' : 'off';
+  } catch {
+    document.documentElement.dataset.themeFamily = 'default';
+    document.documentElement.dataset.glass = 'on';
+  }
+
+  /**
+   * Whether this window is the one being worked in.
+   *
+   * macOS quiets an inactive window — the traffic lights go grey, the toolbar
+   * recedes, a selected row loses its colour — and it is the single clearest
+   * tell between a Mac app and a web page in a frame. The page has to keep its
+   * own copy of that, because the chrome it dims is chrome it drew itself.
+   */
+  const key = () => {
+    document.documentElement.dataset.key = document.hasFocus() ? 'on' : 'off';
+  };
+  key();
+  window.addEventListener('focus', key);
+  window.addEventListener('blur', key);
 })();

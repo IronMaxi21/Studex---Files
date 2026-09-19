@@ -47,6 +47,12 @@ export interface IssuedSession {
   token: string;
   csrfToken: string;
   expiresAt: number;
+  /**
+   * How many other devices this sign-in signed out. Non-zero is worth telling
+   * the person about: it is either their own older Mac, or someone they lent
+   * the account to.
+   */
+  signedOutElsewhere: number;
 }
 
 const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
@@ -224,6 +230,37 @@ function toPublicUser(row: UserRow | User): User {
   };
 }
 
+/**
+ * Holds an account to config.session.maxConcurrent live sessions by revoking
+ * the least recently used ones once a new session joins. Sessions already
+ * expired are left alone — they authorise nothing, and rewriting them would
+ * only churn rows. Returns how many devices were signed out.
+ */
+function enforceSessionLimit(userId: string, keepSessionId: string, now: number): number {
+  const limit = config.session.maxConcurrent;
+  if (limit <= 0) return 0;
+
+  const others = getDb()
+    .prepare<[string, string, number, number], { id: string }>(
+      `SELECT id FROM sessions
+        WHERE user_id = ? AND id != ? AND revoked_at IS NULL
+          AND idle_expires_at > ? AND absolute_expires_at > ?
+        ORDER BY last_used_at DESC`,
+    )
+    .all(userId, keepSessionId, now, now);
+
+  // The new session occupies one of the slots, so only limit - 1 others stay.
+  const doomed = others.slice(Math.max(0, limit - 1));
+  if (doomed.length === 0) return 0;
+
+  const revoke = getDb().prepare(
+    `UPDATE sessions SET revoked_at = ?, revoked_reason = 'signed_in_elsewhere'
+      WHERE id = ? AND revoked_at IS NULL`,
+  );
+  for (const row of doomed) revoke.run(now, row.id);
+  return doomed.length;
+}
+
 export function issueSession(userId: string, ip: string | null, ua: string | null): IssuedSession {
   const token = generateToken();
   const csrfToken = generateToken();
@@ -232,31 +269,37 @@ export function issueSession(userId: string, ip: string | null, ua: string | nul
   const idleExpires = now + config.session.idleTtlMs;
   const absoluteExpires = now + config.session.absoluteTtlMs;
 
-  getDb()
-    .prepare(
-      `INSERT INTO sessions
-         (id, user_id, token_hash, csrf_token_hash, created_at, last_used_at,
-          idle_expires_at, absolute_expires_at, ip, user_agent)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      id,
-      userId,
-      hashToken(token),
-      hashToken(csrfToken),
-      now,
-      now,
-      idleExpires,
-      absoluteExpires,
-      ip,
-      ua?.slice(0, 500) ?? null,
-    );
+  // One transaction, so there is no instant where the account holds two live
+  // sessions: whoever reads the table sees either the old device or the new.
+  const signedOutElsewhere = tx(() => {
+    getDb()
+      .prepare(
+        `INSERT INTO sessions
+           (id, user_id, token_hash, csrf_token_hash, created_at, last_used_at,
+            idle_expires_at, absolute_expires_at, ip, user_agent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        id,
+        userId,
+        hashToken(token),
+        hashToken(csrfToken),
+        now,
+        now,
+        idleExpires,
+        absoluteExpires,
+        ip,
+        ua?.slice(0, 500) ?? null,
+      );
+    return enforceSessionLimit(userId, id, now);
+  });
 
   return {
     sessionId: id,
     token,
     csrfToken,
     expiresAt: Math.min(idleExpires, absoluteExpires),
+    signedOutElsewhere,
   };
 }
 
@@ -659,6 +702,21 @@ export function authenticate(token: string): { user: User; session: SessionRow }
   }
 
   return { user, session };
+}
+
+/**
+ * Why a token stopped working, for the one case worth naming: the account
+ * signed in somewhere else. Everything else — expiry, logout, an unknown
+ * token — stays indistinguishable, which is what keeps a 401 uninformative
+ * to anyone guessing tokens.
+ */
+export function revocationReason(token: string): string | null {
+  const row = getDb()
+    .prepare<[string], { revoked_reason: string | null }>(
+      'SELECT revoked_reason FROM sessions WHERE token_hash = ? AND revoked_at IS NOT NULL',
+    )
+    .get(hashToken(token));
+  return row?.revoked_reason ?? null;
 }
 
 export function revokeSession(sessionId: string): void {

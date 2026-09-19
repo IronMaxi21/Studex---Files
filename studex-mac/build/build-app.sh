@@ -12,6 +12,9 @@
 #   ./build/build-app.sh --sign "Developer ID Application: … (TEAMID)"
 #   ./build/build-app.sh --notarize      → also submit to Apple and staple
 #   ./build/build-app.sh --dmg           → also make dist/Studex-mac.dmg
+#   ./build/build-app.sh --dev           → a developer build: no release AI key
+#                                          baked in, and the developer-only
+#                                          screens unlocked
 #
 # Signing and notarising are driven by the environment, so a release can be cut
 # without typing a certificate name into a shell:
@@ -40,10 +43,16 @@ BUNDLE_NODE=1
 SIGN_IDENTITY="${STUDEX_SIGN_IDENTITY:-}"
 NOTARIZE=0
 MAKE_DMG=0
+# What kind of build this is. A release is the default because that is what
+# leaves this machine; --dev is for the copy that stays on it. The app stamps
+# this into Info.plist and passes it to the server, and everything that is
+# hidden from a release build keys off it.
+CHANNEL="${STUDEX_CHANNEL:-release}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --dmg) MAKE_DMG=1; shift ;;
+    --dev) CHANNEL=dev; shift ;;
     --no-node) BUNDLE_NODE=0; shift ;;
     --out) OUT_DIR="$2"; shift 2 ;;
     --sign) SIGN_IDENTITY="$2"; shift 2 ;;
@@ -158,9 +167,14 @@ fi
 # from STUDEX_GEMINI_KEY or a private file on the release machine — never from
 # the source tree — and is written masked (XOR with a random pad), which only
 # keeps it out of a naive scan of the bundle: it is not a secret once shipped.
+# A developer build never gets it: that build talks to whatever key its own
+# settings hold, so the two kinds of build are never using the same key, and
+# the release key is not sitting in a bundle that is rebuilt all day.
 GEMINI_KEY_FILE="${STUDEX_GEMINI_KEY_FILE:-$HOME/.studex-release/gemini.key}"
 rm -f "$RESOURCES/ai-key.json"
-if [ -n "${STUDEX_GEMINI_KEY:-}" ] || [ -f "$GEMINI_KEY_FILE" ]; then
+if [ "$CHANNEL" != "release" ]; then
+  step "Developer build: no release AI key baked in"
+elif [ -n "${STUDEX_GEMINI_KEY:-}" ] || [ -f "$GEMINI_KEY_FILE" ]; then
   step "Baking in the release AI key"
   STUDEX_GEMINI_KEY_FILE="$GEMINI_KEY_FILE" node -e '
     const fs = require("fs"), crypto = require("crypto");
@@ -248,6 +262,9 @@ cat > "$CONTENTS/Info.plist" <<PLIST
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleVersion</key><string>$BUILD_STAMP</string>
   <key>LSMinimumSystemVersion</key><string>$DEPLOYMENT_TARGET</string>
+  <!-- release or dev. Read by Paths.isDeveloperBuild and handed to the
+       backend, which is what hides the developer-only screens. -->
+  <key>StudexChannel</key><string>$CHANNEL</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
   <key>NSHighResolutionCapable</key><true/>
   <!-- Handoff, and the app's own restoration: a window is remembered as the
@@ -417,6 +434,9 @@ fi
 
 SIZE="$(du -sh "$APP" | cut -f1)"
 step "Built $APP ($SIZE)"
+if [ "$CHANNEL" != "release" ]; then
+  printf '  Developer build: the developer screens are unlocked, no release AI key baked in.\n'
+fi
 if [ "$SIGN_IDENTITY" = "-" ]; then
   printf '  \033[33mAd-hoc signed: another Mac will refuse to open this.\033[0m\n'
   printf '  Set STUDEX_SIGN_IDENTITY and pass --notarize to cut a release build.\n'
@@ -429,14 +449,120 @@ echo "  open \"$APP\""
 # ── the disk image ──────────────────────────────────────────────────────
 if [ "$MAKE_DMG" -eq 1 ]; then
   step "Making Studex-mac.dmg"
+
+  # The background, at 1x and 2x in one TIFF — which is how a disk image
+  # carries a Retina background, since Finder reads no @2x file of its own.
+  # Cached like the icon: rendering it costs a compile.
+  BG_TIFF="$BUILD_DIR/dmg-background.tiff"
+  if [ ! -f "$BG_TIFF" ] || [ "$BUILD_DIR/make-dmg-background.swift" -nt "$BG_TIFF" ]; then
+    step "Rendering the disk image background"
+    BG_WORK="$(mktemp -d)"
+    swiftc -O -o "$BG_WORK/make-dmg-background" "$BUILD_DIR/make-dmg-background.swift" \
+      || die "the disk image background did not compile."
+    "$BG_WORK/make-dmg-background" "$BG_WORK/out" || die "could not render the disk image background."
+    tiffutil -cathidpicheck "$BG_WORK/out/background.png" "$BG_WORK/out/background@2x.png" -out "$BG_TIFF" >/dev/null \
+      || die "could not combine the disk image background."
+    rm -rf "$BG_WORK"
+  fi
+
   DMG_STAGE="$(mktemp -d)"
   ditto "$APP" "$DMG_STAGE/Studex.app"
   ln -s /Applications "$DMG_STAGE/Applications"
+  mkdir "$DMG_STAGE/.background"
+  cp "$BG_TIFF" "$DMG_STAGE/.background/background.tiff"
+  cp "$ICNS" "$DMG_STAGE/.VolumeIcon.icns"
+
   DMG="$OUT_DIR/Studex-mac.dmg"
   rm -f "$DMG"
-  hdiutil create -volname Studex -srcfolder "$DMG_STAGE" -ov -format UDZO "$DMG" >/dev/null \
+
+  # Laying out the window means writing a .DS_Store, which only Finder can do,
+  # so the image is built read/write, arranged while mounted, then converted to
+  # the compressed image that ships. If Finder cannot be driven — no desktop
+  # session, or automation refused — the image is still converted, just with
+  # whatever layout Finder would pick.
+  DMG_WORK="$(mktemp -d)"
+  RW_DMG="$DMG_WORK/rw.dmg"
+  hdiutil create -volname Studex -srcfolder "$DMG_STAGE" -ov -format UDRW -fs HFS+ "$RW_DMG" >/dev/null \
     || die "could not create the disk image."
-  rm -rf "$DMG_STAGE"
+
+  # Finder writes the layout into the volume's .DS_Store, and driving Finder
+  # needs permission to send it Apple events — which a build over ssh, in CI,
+  # or from a terminal the user has not allowed simply does not have. So the
+  # .DS_Store Finder writes is kept, and a build that cannot drive Finder
+  # reuses it. Delete it to start the layout again.
+  LAYOUT_CACHE="$BUILD_DIR/dmg-layout.DS_Store"
+
+  MOUNT=""
+  STYLED=0
+  if ATTACH_OUTPUT="$(hdiutil attach "$RW_DMG" -nobrowse -noautoopen -readwrite 2>/dev/null)"; then
+    MOUNT="$(printf '%s\n' "$ATTACH_OUTPUT" | sed -n 's|.*\(/Volumes/.*\)$|\1|p' | tail -1)"
+  fi
+
+  if [ -n "$MOUNT" ] && [ -d "$MOUNT" ]; then
+    # Whatever the volume ended up called — a leftover /Volumes/Studex would
+    # push this one to "Studex 1", and Finder is addressed by that name.
+    VOLUME_NAME="$(basename "$MOUNT")"
+    # Tells Finder the volume has its own icon, in .VolumeIcon.icns.
+    if command -v SetFile >/dev/null 2>&1; then SetFile -a C "$MOUNT" || true; fi
+
+    # 640×400 is the background's size; Finder's window bounds are its content,
+    # and the icons are centred on the two wells the picture draws.
+    if ! osascript >/dev/null 2>&1 <<APPLESCRIPT
+tell application "Finder"
+  tell disk "$VOLUME_NAME"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    set the bounds of container window to {200, 140, 840, 540}
+    set viewOptions to the icon view options of container window
+    set arrangement of viewOptions to not arranged
+    set icon size of viewOptions to 112
+    set text size of viewOptions to 12
+    set label position of viewOptions to bottom
+    set background picture of viewOptions to file ".background:background.tiff"
+    set position of item "Studex.app" of container window to {168, 218}
+    set position of item "Applications" of container window to {472, 218}
+    close
+    open
+    update without registering applications
+    delay 2
+  end tell
+end tell
+APPLESCRIPT
+    then
+      if [ -f "$LAYOUT_CACHE" ]; then
+        cp "$LAYOUT_CACHE" "$MOUNT/.DS_Store"
+        step "Finder is not scriptable here; reusing the saved window layout"
+      else
+        echo "  ! Finder would not lay the window out, and nothing is saved to fall back on." >&2
+        echo "  ! Allow this terminal to control Finder in System Settings → Privacy & Security → Automation, then build again." >&2
+      fi
+    else
+      STYLED=1
+    fi
+
+    chmod -Rf go-w "$MOUNT" 2>/dev/null || true
+    sync
+    hdiutil detach "$MOUNT" >/dev/null 2>&1 || hdiutil detach "$MOUNT" -force >/dev/null 2>&1 || true
+  else
+    echo "  ! Could not mount the image to lay it out; shipping it unarranged." >&2
+  fi
+
+  # Finder flushes .DS_Store as the volume goes away, so it is read back from a
+  # fresh mount rather than from the one it was just written on.
+  if [ "$STYLED" -eq 1 ]; then
+    if RE_ATTACH="$(hdiutil attach "$RW_DMG" -nobrowse -noautoopen -readonly 2>/dev/null)"; then
+      RE_MOUNT="$(printf '%s\n' "$RE_ATTACH" | sed -n 's|.*\(/Volumes/.*\)$|\1|p' | tail -1)"
+      [ -f "$RE_MOUNT/.DS_Store" ] && cp "$RE_MOUNT/.DS_Store" "$LAYOUT_CACHE"
+      hdiutil detach "$RE_MOUNT" >/dev/null 2>&1 || hdiutil detach "$RE_MOUNT" -force >/dev/null 2>&1 || true
+    fi
+  fi
+
+  hdiutil convert "$RW_DMG" -format UDZO -imagekey zlib-level=9 -o "$DMG" >/dev/null \
+    || die "could not compress the disk image."
+
+  rm -rf "$DMG_STAGE" "$DMG_WORK"
   if [ "$SIGN_IDENTITY" != "-" ]; then codesign --force --sign "$SIGN_IDENTITY" "$DMG" || true; fi
   echo "  $DMG ($(du -sh "$DMG" | cut -f1))"
 fi

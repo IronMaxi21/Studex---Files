@@ -18,6 +18,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// it cannot rewrite the list of routes to reopen.
     private var isQuitting = false
 
+    /// Set while the "could not restart" alert is up, so a second report
+    /// arriving behind it cannot put up a second one.
+    private var isPresentingFailure = false
+
     /// Where the backend is listening, once it is. Held because a window
     /// opened later has to be pointed at it too.
     private var serverURL: URL?
@@ -67,8 +71,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         StatusBar.shared.host = self
         StatusBar.shared.start()
 
-        backend.onUnexpectedExit = { [weak self] code in self?.backendStopped(code) }
-        startBackend()
+        backend.onStatus = { [weak self] status in self?.backendStatusChanged(status) }
+        backend.start()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -194,18 +198,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CGFloat(UserDefaults.standard.double(forKey: zoomKey).nonZero ?? 1)
     }
 
-    private func startBackend() {
-        backend.start { [weak self] result in
-            guard let self else { return }
-            switch result {
-            case .success(let url):
-                self.serverURL = url
-                for studex in self.windows {
-                    studex.showInterface(at: url, zoom: Self.rememberedZoom())
-                }
-            case .failure(let error):
-                self.presentFatal(error)
+    /**
+     What the supervisor is doing, in window terms.
+
+     There is deliberately nothing here for a backend that stopped: it restarts
+     itself, and all this has to do is take the page out while there is nothing
+     behind it and put it back afterwards, on the same route. A restart that
+     nobody has to click is a restart nobody has to know about.
+     */
+    private func backendStatusChanged(_ status: Backend.Status) {
+        switch status {
+        case .starting:
+            // First launch: the windows are already showing their launch view
+            // and there is nothing to say. Otherwise this is a recovery, and
+            // the page has to come out — the address it was loaded from has
+            // gone, and the next server gets a port of its own.
+            let recovering = serverURL != nil
+            serverURL = nil
+            for studex in windows {
+                studex.showLaunch(message: recovering ? "Reconnecting…" : "Starting Studex…")
             }
+
+        case .ready(let url):
+            serverURL = url
+            for studex in windows {
+                studex.showInterface(at: url, zoom: Self.rememberedZoom())
+            }
+
+        case .unavailable(let error):
+            presentUnavailable(error)
         }
     }
 
@@ -273,36 +294,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Failure
 
-    private func presentFatal(_ error: Error) {
-        let alert = NSAlert()
-        alert.alertStyle = .critical
-        alert.messageText = (error as? LocalizedError)?.errorDescription ?? "Studex could not start."
-        alert.informativeText = (error as? LocalizedError)?.recoverySuggestion ?? error.localizedDescription
-        alert.addButton(withTitle: "Quit")
-        alert.addButton(withTitle: "Show Log")
-        let response = alert.runModal()
-        if response == .alertSecondButtonReturn { revealServerLog(nil) }
-        NSApp.terminate(nil)
-    }
+    /**
+     Studex could not get itself working again.
 
-    private func backendStopped(_ code: Int32) {
+     This is the end of several quiet attempts, not the first sign of trouble,
+     which is why it is worth interrupting for — and why the first button is
+     Try Again rather than Quit. Whatever went wrong, nothing was lost: the
+     library is a file on disk that the next launch opens exactly as it was.
+     Saying so is most of the point of this alert.
+     */
+    private func presentUnavailable(_ error: Error) {
+        // One at a time. The supervisor reports once per incident, but a
+        // second window's worth of bad luck should not stack up dialogs.
+        guard !isPresentingFailure, !isQuitting else { return }
+        isPresentingFailure = true
+        defer { isPresentingFailure = false }
+
         let alert = NSAlert()
-        alert.alertStyle = .critical
-        alert.messageText = "The Studex backend stopped."
+        alert.alertStyle = .warning
+        alert.messageText = (error as? LocalizedError)?.errorDescription ?? "Studex stopped responding."
+        let detail = (error as? LocalizedError)?.recoverySuggestion ?? error.localizedDescription
         alert.informativeText = """
-        It exited with status \(code). Your library is unchanged — restarting reopens it from disk.
+        Studex tried to restart itself and could not. Nothing has been lost — your library is on \
+        this Mac and opens as it was.
+
+        \(detail)
         """
-        alert.addButton(withTitle: "Restart")
+        alert.addButton(withTitle: "Try Again")
         alert.addButton(withTitle: "Quit")
         alert.addButton(withTitle: "Show Log")
 
         switch alert.runModal() {
         case .alertFirstButtonReturn:
-            serverURL = nil
             // Every window goes back to its launch screen and comes back on
             // the screen it was showing: each one remembers its own route.
-            for studex in windows { studex.showLaunch() }
-            startBackend()
+            for studex in windows { studex.showLaunch(message: "Reconnecting…") }
+            backend.start()
         case .alertThirdButtonReturn:
             revealServerLog(nil)
             NSApp.terminate(nil)

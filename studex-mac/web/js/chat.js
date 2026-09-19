@@ -5,7 +5,11 @@
  * note can be followed up after moving to the deck made from it. What the
  * model is shown of the page is decided when each message is sent — the page
  * open *then*, by id — and the server reads the text itself from what the
- * account owns. The client never pastes a document into the request.
+ * account owns wherever it can, so a note or a deck goes over as an id.
+ *
+ * What it cannot fetch — a PDF's page, the calendar, statistics, a canvas — it
+ * is sent, as the text the pane is showing. That is the difference between a
+ * model that can read the screen and one that can only read the library.
  *
  * Each conversation is saved to the account as it goes, so the history view
  * (the clock in the header) can reopen an earlier one and carry it on, or
@@ -14,8 +18,15 @@
 import { el, icon, mount } from './dom.js';
 import { api } from './api.js';
 import { currentPanes, currentRoute, navigate } from './router.js';
-import { state } from './store.js';
+import { state, fileById, toast } from './store.js';
+import { carriesItem, readItem } from './dnd.js';
+import { FILE_ICON } from './format.js';
+import { sfx } from './sfx.js';
 import { register as registerShortcut } from './shortcuts.js';
+import { hasMath, mathSegments, renderMath } from './math.js';
+import { highlight, resolveLanguage, guessLanguage } from './syntax.js';
+import { actionCard } from './ai-actions.js';
+import { screenText } from './screen.js';
 
 const FILE_ROUTES = new Set(['doc', 'pdf', 'deck', 'canvas']);
 const MAX_MESSAGES = 60;
@@ -31,6 +42,16 @@ let usePage = true;
 let chatId = null;
 /** True while the panel shows the list of earlier chats instead of the open one. */
 let showingHistory = false;
+/**
+ * A file dragged onto the panel from the library, as `{ id, title, kind }`.
+ *
+ * It answers the commonest way of wanting to ask about something that is not
+ * open: you can see it in the sidebar, so you throw it at the chat rather than
+ * opening it in a pane first and losing the page you were on. While one is
+ * attached it is what the question is about — it stands in for the page, since
+ * the server reads one file per question.
+ */
+let pinned = null;
 
 /** The top-bar button. Every page's top bar carries one. */
 /** Pages where the conversation is about something on screen, and so earns the words. */
@@ -67,10 +88,51 @@ export function openChat() {
   captureSelection();
   if (!panel) {
     panel = el('aside', { class: 'ai-chat', role: 'complementary', 'aria-label': 'Ask AI' });
+    acceptFiles(panel);
     document.body.appendChild(panel);
     document.documentElement.classList.add('ai-chat-on');
   }
   syncButtons();
+  void draw();
+}
+
+/**
+ * The whole panel is the target, not a strip at the bottom of it: a drag is
+ * aimed with the shoulder, and the thing being aimed at is the chat.
+ */
+function acceptFiles(node) {
+  node.addEventListener('dragover', (event) => {
+    if (!carriesItem(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'link';
+    node.classList.add('drop-on');
+  });
+  // A drag that leaves for a child fires leave on the parent first, so the
+  // highlight is cleared only when the pointer is genuinely outside.
+  node.addEventListener('dragleave', (event) => {
+    if (!node.contains(event.relatedTarget)) node.classList.remove('drop-on');
+  });
+  node.addEventListener('drop', (event) => {
+    node.classList.remove('drop-on');
+    if (!carriesItem(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const item = readItem(event);
+    const files = (item?.items ?? (item ? [item] : [])).filter((one) => one.kind === 'file');
+    if (!files.length) { toast('Folders cannot be attached — drop a file.'); return; }
+    attach(files[0].id);
+    // One question reads one file, so the rest are not silently dropped on the
+    // floor without saying so.
+    if (files.length > 1) toast('One file at a time — attached the first.');
+  });
+}
+
+/** Attach a file by id, if it is still in the library. */
+function attach(id) {
+  const file = fileById(id);
+  if (!file) { toast('That file is no longer there.'); return; }
+  pinned = { id: file.id, title: file.title || 'Untitled', kind: file.kind };
+  sfx('drop');
   void draw();
 }
 
@@ -98,11 +160,32 @@ function pageContext() {
     return { context: { route: head, fileId: id }, label: file ? `“${file.title || 'Untitled'}”` : 'this page' };
   }
   if (head === 'topics') return { context: { route: head }, label: 'your topics' };
-  return null;
+  // Everything else: there is no row to fetch, but there is a screen to read,
+  // so the page is still something the question can be asked about.
+  return { context: { route: head }, label: ROUTE_LABELS[head] ?? 'this page' };
 }
 
+/** What each screen is called when the chat offers to read it. */
+const ROUTE_LABELS = {
+  home: 'your home page',
+  library: 'your library',
+  folder: 'this folder',
+  calendar: 'your calendar',
+  timetable: 'your timetable',
+  canvas: 'this canvas',
+  flashcards: 'your review queue',
+  review: 'this review',
+  test: 'this test',
+  mock: 'this mock',
+  stats: 'your statistics',
+  trash: 'the trash',
+  settings: 'settings',
+};
+
 function suggestions(page) {
-  const head = page?.context.route;
+  // An attached file is what the chips should be about, since it is what the
+  // question will be read against.
+  const head = pinned?.kind ?? page?.context.route;
   if (head === 'doc' || head === 'pdf') return ['Summarise this in five bullet points', 'Explain the hardest idea here simply', 'Ask me three questions on this'];
   if (head === 'deck') return ['Which of these cards are too vague?', 'Suggest five more cards for this deck', 'Group these cards into themes'];
   if (head === 'topics') return ['What should I revise first?', 'Make me a week’s revision plan', 'Which topics look like they overlap?'];
@@ -172,7 +255,10 @@ async function draw() {
 
   if (!messages.length) {
     log.appendChild(el('div', { class: 'ai-chat-empty' },
-      el('p', { text: page ? `Ask about ${page.label}, or anything else you are studying.` : 'Ask about anything you are studying.' }),
+      el('p', { text: pinned
+        ? `Ask about “${pinned.title}”, or anything else you are studying.`
+        : page ? `Ask about ${page.label}, or anything else you are studying.` : 'Ask about anything you are studying.' }),
+      el('p', { class: 'muted', text: 'Drag a file here to ask about it.' }),
       el('div', { class: 'ai-chat-suggest' }, suggestions(page).map((s) =>
         el('button', { class: 'chip', type: 'button', text: s, onclick: () => submit(s) }))),
     ));
@@ -181,10 +267,17 @@ async function draw() {
   if (sending) log.appendChild(el('div', { class: 'ai-thinking' }, icon('sparkle', { size: 13 }), 'Thinking…'));
 
   const attached = el('div', { class: 'ai-chat-attached' },
+    pinned
+      ? el('span', { class: 'ai-chat-tag file', title: `Answering about “${pinned.title}”` },
+          icon(FILE_ICON[pinned.kind] ?? 'file', { size: 12 }), pinned.title,
+          el('button', { type: 'button', 'aria-label': `Detach ${pinned.title}`, onclick: () => { pinned = null; void draw(); } }, icon('x', { size: 11 })))
+      : null,
     page
       ? el('label', { class: 'ai-chat-tag', title: 'Send what is on this page with each question' },
           el('input', { type: 'checkbox', checked: usePage, onchange: (e) => { usePage = e.target.checked; } }),
-          `Use ${page.label}`)
+          // With a file attached the page is no longer what the question is
+          // about, so the box offers the smaller thing it can still do.
+          pinned ? 'Also read this page' : `Use ${page.label}`)
       : null,
     selection
       ? el('span', { class: 'ai-chat-tag', title: selection.slice(0, 400) },
@@ -209,6 +302,7 @@ async function draw() {
 function newChat() {
   messages = [];
   chatId = null;
+  pinned = null;
   showingHistory = false;
   void draw();
 }
@@ -307,8 +401,15 @@ async function retry() {
 
 async function request() {
   const page = pageContext();
+  // The screen is read at the moment of asking, not when the panel was drawn:
+  // a question typed after scrolling is about where the reader ended up.
+  const screen = usePage ? screenText() : '';
   const context = {
     ...(usePage && page ? page.context : {}),
+    // A file dropped on the panel wins over the page behind it: one question
+    // reads one file, and the attached one is the one that was chosen.
+    ...(pinned ? { route: pinned.kind, fileId: pinned.id } : {}),
+    ...(screen ? { screen } : {}),
     ...(selection ? { selection } : {}),
   };
   selection = '';
@@ -338,22 +439,114 @@ async function request() {
  * bold, italic and inline code. Built as nodes, never as HTML, so an answer
  * that contains markup shows the markup rather than running it.
  */
+/**
+ * `Question :: Answer`, which is how the tutor is asked to write a card and
+ * how the app's own editors store one. The split is on the first ` :: ` with
+ * text either side, so a card whose answer contains a colon survives.
+ */
+const CARD_LINE = /^\s*(?:[-*\u2022]\s+)?(.+?)\s+::\s+(.+?)\s*$/;
+
+/**
+ * A run of card lines, one row each, with a button that makes the deck.
+ *
+ * The rows are drawn rather than the raw lines so a set of twenty cards reads
+ * as twenty cards; the button hands the same rows to the deck action, so
+ * pressing it goes through exactly the path a proposed deck goes through.
+ */
+function cardList(rows, heading) {
+  const wrap = el('div', { class: 'ai-cards' });
+  for (const row of rows) {
+    wrap.appendChild(el('div', { class: 'ai-card' },
+      el('span', { class: 'q' }, inline(row.front)),
+      el('span', { class: 'a' }, inline(row.back)),
+    ));
+  }
+  if (rows.length > 1) {
+    wrap.appendChild(actionCard(JSON.stringify({
+      do: 'deck',
+      title: heading ? heading.slice(0, 80) : 'Flashcards',
+      cards: rows,
+    })));
+  }
+  return wrap;
+}
+
 function markdown(source) {
   const out = [];
   const lines = source.replace(/\r\n/g, '\n').split('\n');
   let i = 0;
+  // The heading a run of cards sits under names the deck it would become.
+  let lastHeading = '';
   while (i < lines.length) {
     const line = lines[i];
-    if (/^\s*```/.test(line)) {
+    const fence = /^\s*```\s*([\w-]*)/.exec(line);
+    if (fence) {
       const code = [];
       i += 1;
       while (i < lines.length && !/^\s*```/.test(lines[i])) { code.push(lines[i]); i += 1; }
       i += 1;
-      out.push(el('pre', null, el('code', { text: code.join('\n') })));
+      // A block the tutor marked as something it is offering to make becomes a
+      // card with a button on it rather than a wall of JSON. Anything the card
+      // does not recognise comes back as the code it is, so a malformed offer
+      // is visible instead of silently dropped.
+      const body = code.join('\n');
+      out.push(fence[1] === 'studex-action'
+        ? actionCard(body)
+        : el('pre', { class: 'chat-code' },
+            el('code', null, highlight(body, resolveLanguage(fence[1]) ?? guessLanguage(body) ?? 'plain'))));
       continue;
     }
+    // A display equation standing on its own. It is pulled out at block level
+    // rather than left to `inline`, because the model writes anything with a
+    // fraction in it as `$$` on one line, the equation on the next and `$$` on
+    // a third — three paragraphs, as far as the rest of this parser is
+    // concerned. A run that never closes is left alone and falls through to the
+    // paragraph below, so a stray `$$` costs a line rather than the answer.
+    const opener = /^\s*(\$\$|\\\[)\s*/.exec(line);
+    if (opener) {
+      const close = opener[1] === '$$' ? '$$' : '\\]';
+      const body = [];
+      let at = i;
+      let rest = line.slice(opener[0].length);
+      let shut = rest.indexOf(close);
+      while (shut === -1 && at + 1 < lines.length) {
+        body.push(rest);
+        at += 1;
+        rest = lines[at];
+        shut = rest.indexOf(close);
+      }
+      // Only a block if the delimiter closes the line it is on; `$$x$$ and so`
+      // is a sentence with an equation in it, and `inline` renders that better.
+      if (shut !== -1 && !rest.slice(shut + close.length).trim()) {
+        body.push(rest.slice(0, shut));
+        const latex = body.join('\n');
+        i = at + 1;
+        if (latex.trim()) { out.push(mathNode(latex, true)); continue; }
+      }
+    }
     const heading = /^\s*#{1,6}\s+(.*)$/.exec(line);
-    if (heading) { out.push(el('p', { class: 'h' }, inline(heading[1]))); i += 1; continue; }
+    if (heading) {
+      lastHeading = heading[1].trim();
+      out.push(el('p', { class: 'h' }, inline(heading[1])));
+      i += 1;
+      continue;
+    }
+    // A run of `Question :: Answer` lines is a set of cards, not a paragraph.
+    // Left to the paragraph branch below they are joined with spaces and drawn
+    // as one block of prose — every card in the set run together on one line,
+    // which is exactly what a student does not want to read. Each line becomes
+    // its own row here, and the run as a whole gets a button that turns it
+    // into a real deck.
+    if (CARD_LINE.test(line)) {
+      const rows = [];
+      while (i < lines.length && CARD_LINE.test(lines[i])) {
+        const card = CARD_LINE.exec(lines[i]);
+        rows.push({ front: card[1].trim(), back: card[2].trim() });
+        i += 1;
+      }
+      out.push(cardList(rows, lastHeading));
+      continue;
+    }
     if (/^\s*([-*•]|\d+[.)])\s+/.test(line)) {
       const ordered = /^\s*\d+[.)]/.test(line);
       const list = el(ordered ? 'ol' : 'ul');
@@ -366,13 +559,47 @@ function markdown(source) {
     }
     if (!line.trim()) { i += 1; continue; }
     const para = [];
-    while (i < lines.length && lines[i].trim() && !/^\s*(```|#{1,6}\s|[-*•]\s|\d+[.)]\s)/.test(lines[i])) { para.push(lines[i]); i += 1; }
+    while (i < lines.length && lines[i].trim() && !CARD_LINE.test(lines[i])
+      && !/^\s*(```|#{1,6}\s|[-*•]\s|\d+[.)]\s)/.test(lines[i])) { para.push(lines[i]); i += 1; }
     out.push(el('p', null, inline(para.join('\n'))));
   }
   return out;
 }
 
+/**
+ * One equation, typeset.
+ *
+ * The model is asked for LaTeX and used to hand back `$2\\text{H}^+ \\rightarrow
+ * \\text{H}_2$` as literal characters, which is the raw source of the thing the
+ * student asked to see. KaTeX is already vendored for documents and cards, so
+ * the same renderer draws it here; it loads itself on first use and shows the
+ * source until it arrives.
+ */
+function mathNode(latex, display) {
+  const node = el(display ? 'div' : 'span', { class: display ? 'ai-math' : 'math-inline' });
+  renderMath(node, latex, { display });
+  return node;
+}
+
+/**
+ * Inline formatting, with maths taken out first.
+ *
+ * Order matters: `$a * b * c$` run through the emphasis pass first comes back
+ * with the middle turned into italics and the asterisks eaten, so the LaTeX is
+ * lifted out before a single markdown rule is applied, and only the prose
+ * between equations is marked up.
+ */
 function inline(text) {
+  if (!hasMath(text)) return inlineMarkdown(text);
+  const parts = [];
+  for (const seg of mathSegments(text)) {
+    if (seg.type === 'text') parts.push(...inlineMarkdown(seg.value));
+    else parts.push(mathNode(seg.value, seg.type === 'display'));
+  }
+  return parts;
+}
+
+function inlineMarkdown(text) {
   const parts = [];
   const pattern = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g;
   let last = 0;

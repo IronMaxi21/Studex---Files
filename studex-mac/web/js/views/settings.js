@@ -1,7 +1,7 @@
 /** Screen 10 — Settings. Appearance, study, account and sessions. */
 import { el, icon, mount } from '../dom.js';
 import { api } from '../api.js';
-import { glassEnabled, setGlassEnabled, highContrast, setHighContrast, accentPrefs, setAccentPrefs, savedPalettes, savePalette, deletePalette, densityPrefs, setDensityPrefs, state, loadLibrary, applyTheme, deviceId, toast, reportError, rerender, fileById, folderById } from '../store.js';
+import { themeFamily, setThemeFamily, glassEnabled, setGlassEnabled, transparencyReduced, highContrast, setHighContrast, accentPrefs, setAccentPrefs, savedPalettes, savePalette, deletePalette, densityPrefs, setDensityPrefs, state, may, loadLibrary, applyTheme, deviceId, toast, reportError, rerender, fileById, folderById, setHomeLayout, HOME_PANELS } from '../store.js';
 import { navigate } from '../router.js';
 import { topbar } from '../shell.js';
 import { bytes } from '../format.js';
@@ -19,32 +19,53 @@ import {
   clearBinding, resetBindings, hasCustomBindings, comboFromEvent,
 } from '../shortcuts.js';
 import { drawTrash } from './trash.js';
+import { homeArrangeRows } from './home.js';
+import { openFeedbackSheet } from '../feedback.js';
 import { dropdown } from '../select.js';
 import { studyPrefs, saveStudyPrefs, STUDY_DEFAULTS } from '../studyprefs.js';
 import { focusPrefs, setFocusPrefs, openFocus } from '../focus.js';
+import { SOUNDSCAPES, auditionSoundscape, releaseSoundscape, setSoundscapeVolume } from '../soundscape.js';
 import { speechAvailable } from '../speak.js';
+import { sfxPrefs, setSfxPrefs, auditionSfx, SFX_DEFAULTS } from '../sfx.js';
 
 /**
  * Every screen, and the words someone might type looking for it. The search
  * box matches the label and these, so "dark mode" finds Appearance and
  * "password" finds Lock without anyone learning where things were filed.
+ *
+ * `group` is what the list is filed under. Fifteen flat rows read as a pile;
+ * five short groups read as a place where each thing has somewhere it belongs,
+ * and it is the grouping — not the search box — that answers "where would they
+ * have put this?" the first time someone looks.
  */
+const GROUPS = [
+  { id: 'look', label: 'Look and feel' },
+  { id: 'study', label: 'Studying' },
+  { id: 'library', label: 'Your library' },
+  { id: 'account', label: 'Account' },
+  { id: 'app', label: 'The app' },
+];
+
 const SECTIONS = [
-  { id: 'appearance', label: 'Appearance', icon: 'paint-brush', keywords: 'theme dark light mode accent colour color density glass contrast palette font' },
-  { id: 'workspace', label: 'Workspace', icon: 'layout', keywords: 'layout sidebar shell dock tabs paper grid page width type size reading font spotlight' },
-  { id: 'study', label: 'Study', icon: 'graduation-cap', keywords: 'cards review spaced repetition quiz goal focus timer pomodoro speech voice' },
-  { id: 'notifications', label: 'Notifications', icon: 'bell', keywords: 'alerts reminders banners sound' },
-  { id: 'plan', label: 'Plan', icon: 'sparkle', keywords: 'pro subscription billing upgrade' },
-  { id: 'sync', label: 'Sync', icon: 'cloud-arrow-up', keywords: 'cloud backup devices supabase offline' },
-  { id: 'sharing', label: 'Sharing', icon: 'share-network', keywords: 'share link collaborate public' },
-  { id: 'lock', label: 'Lock', icon: 'lock-key', keywords: 'password passcode touch id privacy security' },
-  { id: 'ai', label: 'AI', icon: 'sparkle', keywords: 'gemini openrouter model key assistant chat' },
-  { id: 'shortcuts', label: 'Keyboard shortcuts', icon: 'keyboard', keywords: 'keys hotkeys commands' },
-  { id: 'updates', label: 'Updates', icon: 'arrow-clockwise', keywords: 'version upgrade release beta channel changelog what\'s new download dmg install' },
-  { id: 'data', label: 'Your data', icon: 'export', keywords: 'export import backup download delete library' },
-  { id: 'trash', label: 'Trash', icon: 'trash', keywords: 'deleted restore bin recover' },
-  { id: 'account', label: 'Account', icon: 'user', keywords: 'profile email name sign out log out' },
-  { id: 'sessions', label: 'Sessions', icon: 'devices', keywords: 'signed in devices macs log out everywhere' },
+  { id: 'appearance', group: 'look', label: 'Appearance', icon: 'paint-brush', keywords: 'theme dark light mode accent colour color density glass contrast palette font organic frosted liquid material serif' },
+  { id: 'workspace', group: 'look', label: 'Workspace', icon: 'layout', keywords: 'layout sidebar shell dock tabs paper grid page width type size reading font spotlight' },
+  { id: 'home', group: 'look', label: 'Home dashboard', icon: 'squares-four', keywords: 'dashboard panels widgets arrange order continue preview library needs work tonight plan focus timer deadlines greeting' },
+  { id: 'study', group: 'study', label: 'Study', icon: 'graduation-cap', keywords: 'cards review spaced repetition quiz goal focus timer pomodoro speech voice' },
+  { id: 'focus', group: 'study', label: 'Focus', icon: 'timer', keywords: 'pomodoro timer blocks break length blur dim hide sidebar focus bar session auto continue' },
+  { id: 'notifications', group: 'study', label: 'Notifications', icon: 'bell', keywords: 'alerts reminders banners sound' },
+  { id: 'sound', group: 'look', label: 'Sound', icon: 'speaker-high', keywords: 'sound effects clicks clicking audio volume mute quiet noise button press feedback beep' },
+  { id: 'sync', group: 'library', label: 'Sync', icon: 'cloud-arrow-up', keywords: 'cloud backup devices supabase offline versions conflict' },
+  { id: 'sharing', group: 'library', label: 'Sharing', icon: 'share-network', keywords: 'share link collaborate public' },
+  { id: 'data', group: 'library', label: 'Your data', icon: 'export', keywords: 'export import backup download delete library' },
+  { id: 'trash', group: 'library', label: 'Trash', icon: 'trash', keywords: 'deleted restore bin recover' },
+  { id: 'account', group: 'account', label: 'Account', icon: 'user', keywords: 'profile email name sign out log out password' },
+  { id: 'plan', group: 'account', label: 'Plan', icon: 'sparkle', keywords: 'pro subscription billing upgrade' },
+  { id: 'sessions', group: 'account', label: 'Sessions', icon: 'devices', keywords: 'signed in devices macs log out everywhere one device at a time' },
+  { id: 'lock', group: 'account', label: 'Lock', icon: 'lock-key', keywords: 'password passcode touch id privacy security' },
+  { id: 'ai', group: 'app', label: 'AI', icon: 'sparkle', keywords: 'gemini openrouter model key assistant chat' },
+  { id: 'shortcuts', group: 'app', label: 'Keyboard shortcuts', icon: 'keyboard', keywords: 'keys hotkeys commands' },
+  { id: 'updates', group: 'app', label: 'Updates', icon: 'arrow-clockwise', keywords: 'version upgrade release beta channel changelog what\'s new download dmg install' },
+  { id: 'help', group: 'app', label: 'Help and feedback', icon: 'lifebuoy', keywords: 'support bug report improvement suggestion issue github contact developers feedback' },
 ];
 
 /** Keeps what was typed while moving between screens, which rebuilds the nav. */
@@ -85,6 +106,16 @@ export async function settingsView(route, host) {
     onclick: () => navigate(`settings/${s.id}`),
   }, icon(s.icon), el('span', { class: 'grow', text: s.label }),
     s.id === 'updates' ? updatesBadge() : null));
+
+  // The nav in groups. Searching hides rows, and a heading whose rows are all
+  // hidden goes with them — otherwise a search for "password" leaves four
+  // empty headings standing over one result.
+  const groupBlocks = GROUPS.map((g) => {
+    const rows = SECTIONS.map((s, i) => (s.group === g.id ? navItems[i] : null)).filter(Boolean);
+    const heading = el('div', { class: 'settings-group-label', text: g.label.toUpperCase() });
+    return { heading, rows, node: el('div', { class: 'settings-group' }, heading, ...rows) };
+  });
+
   const noMatch = el('div', { class: 'dim settings-nomatch hidden', text: 'No settings match.' });
   const matches = (s, q) => `${s.label} ${s.keywords}`.toLowerCase().includes(q);
   const filter = () => {
@@ -95,6 +126,9 @@ export async function settingsView(route, host) {
       navItems[i].classList.toggle('hidden', !hit);
       if (hit) shown += 1;
     });
+    for (const block of groupBlocks) {
+      block.node.classList.toggle('hidden', block.rows.every((row) => row.classList.contains('hidden')));
+    }
     noMatch.classList.toggle('hidden', shown > 0);
   };
   const search = el('input', {
@@ -125,7 +159,7 @@ export async function settingsView(route, host) {
       el('nav', { class: 'settings-nav', 'aria-label': 'Settings sections' },
         el('div', { class: 'section-label plain', style: { padding: '0 10px 12px' }, text: 'SETTINGS' }),
         search,
-        ...navItems,
+        ...groupBlocks.map((b) => b.node),
         noMatch,
         el('button', {
           class: 'plan-card' + (section === 'plan' ? ' on' : ''),
@@ -136,14 +170,18 @@ export async function settingsView(route, host) {
           el('div', { class: 'sub', text: state.user?.plan === 'pro' ? 'Change plan' : 'See what Pro adds' }),
         ),
       ),
-      body,
+      el('div', { class: 'settings-main' }, jumpBar(), body),
     ),
   );
 
   if (section === 'appearance') drawAppearance(body, settings, device);
   else if (section === 'workspace') drawWorkspace(body, device);
+  else if (section === 'home') drawHome(body);
+  else if (section === 'help') drawHelp(body);
   else if (section === 'study') drawStudy(body, settings);
+  else if (section === 'focus') drawFocus(body);
   else if (section === 'notifications') drawNotifications(body, settings);
+  else if (section === 'sound') drawSound(body);
   else if (section === 'plan') drawPlan(body);
   else if (section === 'sync') drawSync(body);
   else if (section === 'sharing') drawSharing(body);
@@ -157,6 +195,32 @@ export async function settingsView(route, host) {
   else if (section === 'trash') await drawTrash(body);
   else if (section === 'account') drawAccount(body);
   else drawSessions(body);
+}
+
+/**
+ * The places these settings are actually about.
+ *
+ * Settings is the one screen people reach by leaving what they were doing, and
+ * the thing they want after changing a setting is to go and look at it. Same
+ * row on every section, so it is somewhere you learn rather than somewhere you
+ * find.
+ */
+const JUMPS = [
+  { to: 'home', label: 'Home', icon: 'house' },
+  { to: 'library', label: 'Documents', icon: 'folder' },
+  { to: 'canvas', label: 'Canvas', icon: 'scribble-loop' },
+  { to: 'flashcards', label: 'Review', icon: 'cards' },
+  { to: 'test', label: 'Test', icon: 'exam' },
+  { to: 'stats', label: 'Progress', icon: 'chart-line' },
+];
+
+function jumpBar() {
+  return el('div', { class: 'settings-jump', role: 'group', 'aria-label': 'Go to' },
+    el('span', { class: 'lead', text: 'Go to' }),
+    JUMPS.map((j) => el('button', {
+      class: 'chip', type: 'button', onclick: () => navigate(j.to),
+    }, icon(j.icon, { size: 13 }), j.label)),
+  );
 }
 
 /**
@@ -219,25 +283,56 @@ function drawAppearance(host, settings, device) {
 
     el('div', { style: { display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '520px' } },
       el('div', { class: 'section-label plain', text: 'THEME' }),
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' } },
+        THEME_FAMILY_CARDS.map((fam) => el('button', {
+          class: 'option-card' + (themeFamily() === fam.id ? ' on' : ''),
+          type: 'button',
+          onclick: () => { setThemeFamily(fam.id); rerender(); },
+        },
+          familyPreview(fam.id),
+          el('div', { class: 'name' }, el('span', { class: 'radio-dot' }), fam.name),
+          el('div', { class: 'desc', text: fam.desc }),
+        )),
+      ),
+      el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '-6px' } },
+        'A theme sets the material — the ground, the corners and the typeface. '
+        + 'Dark and light, high contrast and everything below work on all three; '
+        + 'Organic brings its own colours, so it is the one that does not take an accent. '
+        + 'Kept on this device.'),
 
       row('Theme', seg(['dark', 'light', 'system'], settings?.theme ?? 'dark',
         (value) => patchAccount({ theme: value }), { dark: 'Dark', light: 'Light', system: 'System' })),
       el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '-6px' } },
         'System follows what macOS is set to, and changes with it while the app is open.'),
 
-      row('Accent', primaryAccentPicker(settings)),
-      row('Second accent', accentPicker('secondary')),
-      row('Third accent', accentPicker('tertiary')),
-      row('Colour sections by accent', toggle(accentPrefs().sections, (value) => { setAccentPrefs({ sections: value }); rerender(); })),
-      el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '-6px' } },
-        'The second and third accents tint highlights, progress and focus. With section colouring on, Study uses the second and Calendar, Timetable and Topics use the third. Kept on this device.'),
+      // Organic ships its own pigments and does not take an accent, so the
+      // pickers are taken away rather than left there doing nothing. The line
+      // below says so, because a control that vanishes without explanation
+      // reads as a bug.
+      themeFamily() === 'organic' ? el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6' } },
+        'Organic comes with its own colours — clay, moss and ink on paper — and does not take an accent. '
+        + 'Pick Default or Liquid glass to choose your own again; your accents are remembered either way.')
+        : [
+          row('Accent', primaryAccentPicker(settings)),
+          row('Second accent', accentPicker('secondary')),
+          row('Third accent', accentPicker('tertiary')),
+          row('Colour sections by accent', toggle(accentPrefs().sections, (value) => { setAccentPrefs({ sections: value }); rerender(); })),
+          el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '-6px' } },
+            'The second and third accents tint highlights, progress and focus. With section colouring on, Study uses the second and Calendar, Timetable and Topics use the third. Kept on this device.'),
 
-      el('div', { class: 'section-label plain', style: { marginTop: '4px' }, text: 'PALETTES' }),
-      palettesPanel(settings),
-      el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '-6px' } },
-        'Save the three accents together as a palette, then switch the whole set with one click. Palettes are kept on this device.'),
+          el('div', { class: 'section-label plain', style: { marginTop: '4px' }, text: 'PALETTES' }),
+          palettesPanel(settings),
+          el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '-6px' } },
+            'Save the three accents together as a palette, then switch the whole set with one click. Palettes are kept on this device.'),
+        ],
 
       row('Liquid glass', toggle(glassEnabled(), (value) => { setGlassEnabled(value); rerender(); })),
+      // A switch that has been overruled should say so rather than sit there
+      // looking broken when flipping it changes nothing.
+      transparencyReduced()
+        ? el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '-6px' } },
+          'Off because this Mac has Reduce Transparency turned on, in System Settings → Accessibility → Display.')
+        : null,
 
       el('div', { class: 'section-label plain', style: { marginTop: '4px' }, text: 'ACCESSIBILITY' }),
       row('Reduce motion', toggle(device?.reduce_motion ?? false, (value) => patchDevice({ reduceMotion: value }))),
@@ -245,6 +340,99 @@ function drawAppearance(host, settings, device) {
       el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '-6px' } },
         'High contrast deepens text against its background and makes menus and panels solid rather than translucent. '
         + 'Kept on this device.'),
+    ),
+  );
+}
+
+/** The three shipped materials, in the order they are offered. */
+const THEME_FAMILY_CARDS = [
+  { id: 'default', name: 'Default', desc: 'Nocturne. Warm near-black, tight corners, Inter.' },
+  { id: 'organic', name: 'Organic', desc: 'Paper and clay. Soft corners, serif headings.' },
+  { id: 'glass', name: 'Liquid glass', desc: 'Frosted panes over a cool ground, Mac type.' },
+];
+
+/* The grounds each family is cut from, kept in step with css/tokens.css. A
+   preview has to paint the family it is *offering*, not the one currently on
+   screen, so it cannot read the tokens and these few values are written twice.
+   Only the four a thumbnail actually shows are here. */
+const FAMILY_SWATCH = {
+  default: {
+    dark: { bg: '#1a1b19', surface: '#242521', line: '#43433d', text: '#d4d1c7', accent: 'var(--color-accent)', second: 'var(--color-accent)' },
+    light: { bg: '#f8f7f2', surface: '#fffefb', line: '#e3e0d7', text: '#5d5c55', accent: 'var(--color-accent)', second: 'var(--color-accent)' },
+    radius: '5px', control: '6px', font: "'Inter', system-ui, sans-serif",
+  },
+  // The one family with its own pigments, so its thumbnail shows them rather
+  // than borrowing whatever accent the current theme happens to be set to.
+  organic: {
+    dark: { bg: '#1b1815', surface: '#26221e', line: '#48423a', text: '#d8cfbe', accent: '#9fb383', second: '#d29a6b' },
+    light: { bg: '#f3ece0', surface: '#fffcf5', line: '#e6dccb', text: '#625a50', accent: '#5d7544', second: '#a2603a' },
+    radius: '11px', control: '13px', font: "ui-serif, 'New York', Georgia, serif",
+  },
+  glass: {
+    dark: { bg: '#0e0f13', surface: '#191b21', line: '#383d4a', text: '#ced2de', accent: 'var(--color-accent)', second: 'var(--color-accent)' },
+    light: { bg: '#eceef4', surface: '#ffffff', line: '#dee1ea', text: '#545a6a', accent: 'var(--color-accent)', second: 'var(--color-accent)' },
+    radius: '9px', control: '999px', font: "-apple-system, 'SF Pro Text', system-ui, sans-serif",
+  },
+};
+
+/**
+ * A thumbnail of what a family looks like.
+ *
+ * Three words of description do not tell anyone whether they want the serif
+ * one, so each card carries a small window: the family's ground, a pane at the
+ * family's corner radius, and its heading face set large enough to see what
+ * kind of letter it is. The glass card layers its pane over a wash of the
+ * account's own accent, because a frosted surface with nothing behind it looks
+ * like every other grey rectangle.
+ *
+ * It follows the light/dark setting currently in force, so the choice is shown
+ * the way it will actually arrive.
+ */
+function familyPreview(id) {
+  const spec = FAMILY_SWATCH[id] ?? FAMILY_SWATCH.default;
+  const tone = document.documentElement.dataset.theme === 'light' ? spec.light : spec.dark;
+  const bar = (width, colour) => el('span', {
+    style: {
+      display: 'block', height: '4px', width, borderRadius: '999px',
+      background: colour ?? tone.line,
+    },
+  });
+
+  return el('div', {
+    class: 'family-preview',
+    style: {
+      background: id === 'glass'
+        ? `radial-gradient(70% 90% at 12% 0%, color-mix(in srgb, var(--color-accent) 42%, transparent), transparent 70%), ${tone.bg}`
+        : id === 'organic'
+          ? `radial-gradient(80% 100% at 100% 100%, color-mix(in srgb, ${tone.second} 20%, transparent), transparent 65%), ${tone.bg}`
+          : tone.bg,
+      borderColor: tone.line,
+    },
+  },
+    el('div', {
+      style: {
+        borderRadius: spec.radius, border: `1px solid ${tone.line}`,
+        background: id === 'glass' ? `color-mix(in srgb, ${tone.surface} 55%, transparent)` : tone.surface,
+        backdropFilter: id === 'glass' ? 'blur(6px) saturate(1.6)' : 'none',
+        WebkitBackdropFilter: id === 'glass' ? 'blur(6px) saturate(1.6)' : 'none',
+        padding: '8px 9px', display: 'flex', flexDirection: 'column', gap: '6px',
+      },
+    },
+      el('div', { style: { display: 'flex', alignItems: 'center', gap: '7px' } },
+        el('span', { style: { font: `600 15px/1 ${spec.font}`, color: tone.text }, text: 'Aa' }),
+        // The corner a button wears is the loudest difference between the
+        // families — a capsule is most of what makes the glass one read as
+        // Apple's — so the thumbnail has to show one.
+        el('span', {
+          style: {
+            marginLeft: 'auto', width: '26px', height: '11px',
+            borderRadius: spec.control,
+            background: tone.accent,
+          },
+        }),
+      ),
+      bar('100%'),
+      bar('62%', id === 'organic' ? `color-mix(in srgb, ${tone.second} 55%, transparent)` : null),
     ),
   );
 }
@@ -268,16 +456,21 @@ function drawWorkspace(host, device) {
 
     el('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
       el('div', { class: 'section-label plain', text: 'LAYOUT' }),
-      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 220px)', gap: '16px' } },
-        SHELLS.map((shell) => el('button', {
-          class: 'option-card' + (device?.shell_layout === shell.id ? ' on' : ''),
-          onclick: () => patchDevice({ shellLayout: shell.id }),
-        },
-          shellPreview(shell.id),
-          el('div', { class: 'name' }, el('span', { class: 'radio-dot' }), shell.name),
-          el('div', { class: 'desc', text: shell.desc }),
-        )),
-      ),
+      may('layoutChoice')
+        ? el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 220px)', gap: '16px' } },
+            SHELLS.map((shell) => el('button', {
+              class: 'option-card' + (device?.shell_layout === shell.id ? ' on' : ''),
+              onclick: () => patchDevice({ shellLayout: shell.id }),
+            },
+              shellPreview(shell.id),
+              el('div', { class: 'name' }, el('span', { class: 'radio-dot' }), shell.name),
+              el('div', { class: 'desc', text: shell.desc }),
+            )),
+          )
+        : el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', maxWidth: '52em' } },
+            'Studex uses one window layout: your folders down the left, what you are working on beside them. '
+            + 'How tight or roomy it is set is below, and everything about reading — page width, type size, '
+            + 'reading font — is on the right.'),
       row('Sidebar density', densitySlider('sidebar')),
       row('Page density', densitySlider('page')),
       el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '-6px' } },
@@ -286,19 +479,21 @@ function drawWorkspace(host, device) {
 
     el('div', { class: 'rule' }),
 
-    el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '44px' } },
+    el('div', { class: 'settings-stack' },
       el('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
         el('div', { class: 'section-label plain', text: 'CANVAS' }),
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } },
-          CHROMES.map((chrome) => el('button', {
-            class: 'option-card' + (device?.canvas_chrome === chrome.id ? ' on' : ''),
-            onclick: () => patchDevice({ canvasChrome: chrome.id }),
-          },
-            chromePreview(chrome.id),
-            el('div', { class: 'name' }, el('span', { class: 'radio-dot' }), chrome.name),
-            el('div', { class: 'desc', text: chrome.desc }),
-          )),
-        ),
+        may('layoutChoice')
+          ? el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } },
+              CHROMES.map((chrome) => el('button', {
+                class: 'option-card' + (device?.canvas_chrome === chrome.id ? ' on' : ''),
+                onclick: () => patchDevice({ canvasChrome: chrome.id }),
+              },
+                chromePreview(chrome.id),
+                el('div', { class: 'name' }, el('span', { class: 'radio-dot' }), chrome.name),
+                el('div', { class: 'desc', text: chrome.desc }),
+              )),
+            )
+          : null,
         row('Default paper', seg(Object.keys(CANVAS_GRIDS), device?.canvas_grid ?? 'dots',
           (value) => patchDevice({ canvasGrid: value }), CANVAS_GRIDS)),
         el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '-6px' } },
@@ -324,8 +519,6 @@ function drawWorkspace(host, device) {
           + 'OpenDyslexic, which many readers with dyslexia find clearer.'),      ),
     ),
 
-    el('div', { class: 'rule' }),
-    focusPrefsPanel(),
 
     ...(isNative ? [
       el('div', { class: 'rule' }),
@@ -441,6 +634,99 @@ function palettesPanel(settings) {
   return el('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
     el('div', { class: 'palette-list' }, chips),
     el('div', null, el('button', { class: 'btn', onclick: saveCurrent }, icon('bookmark-simple'), 'Save current as palette')),
+  );
+}
+
+/**
+ * The Home dashboard, settable from Settings.
+ *
+ * It was only ever settable from Home itself, behind an Arrange button on the
+ * page — which is exactly the thing that made Settings feel incomplete: some
+ * of the app's preferences lived on the pages they belonged to and some lived
+ * here. The list is the same list; this is the second door into it.
+ */
+function drawHome(host) {
+  const list = el('div', { class: 'arrange-list' });
+  const draw = () => mount(list, homeArrangeRows(draw));
+  draw();
+
+  mount(host,
+    el('div', null,
+      el('h2', { class: 'section', text: 'Home dashboard' }),
+      el('div', { class: 'muted', style: { marginTop: '9px', maxWidth: '52em', lineHeight: '1.7' } },
+        'Which panels Home shows, and in what order. Kept per device, like the rest of the layout — '
+        + 'a laptop and a desktop can want different things forward. The same list is on Home under Arrange.'),
+    ),
+
+    el('div', { class: 'card glass-card' },
+      el('div', { class: 'section-label plain', text: 'PANELS' }),
+      list,
+      el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6' } },
+        'The four figures across the top of Home — next exam, cards due, tonight, streak — are always there.'),
+    ),
+
+    el('div', { class: 'card glass-card' },
+      el('div', { class: 'section-label plain', text: 'START AGAIN' }),
+      row('Default arrangement', el('button', {
+        class: 'btn', type: 'button', text: 'Restore',
+        onclick: () => { setHomeLayout(HOME_PANELS.map((id) => ({ id, visible: true }))); draw(); toast('Home is back to its default arrangement.'); },
+      })),
+    ),
+  );
+}
+
+/**
+ * Where to send something, and what the app will say about itself when you do.
+ * Issues are public and go out under the person's own GitHub account, so this
+ * screen is honest about that before it opens anything.
+ */
+function drawHelp(host) {
+  const send = (kind) => el('button', {
+    class: 'help-card', type: 'button',
+    onclick: () => void openFeedbackSheet(kind),
+  },
+    icon(kind === 'bug' ? 'bug' : 'lightbulb'),
+    el('div', {},
+      el('div', { class: 'name', text: kind === 'bug' ? 'Report something broken' : 'Suggest an improvement' }),
+      el('div', { class: 'desc', text: kind === 'bug'
+        ? 'It did the wrong thing, or stopped doing anything.'
+        : 'Something Studex should do, or should do better.' }),
+    ),
+    icon('arrow-up-right', { class: 'help-go' }),
+  );
+
+  mount(host,
+    el('div', null,
+      el('h2', { class: 'section', text: 'Help and feedback' }),
+      el('div', { class: 'muted', style: { marginTop: '9px', maxWidth: '52em', lineHeight: '1.7' } },
+        'Studex is built in the open. Suggestions and bug reports go to the same place the developers '
+        + 'work from, so nothing gets lost in an inbox on the way.'),
+    ),
+
+    el('div', { class: 'help-cards' }, send('improvement'), send('bug')),
+
+    el('div', { class: 'card glass-card' },
+      el('div', { class: 'section-label plain', text: 'WHAT GETS SENT' }),
+      el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.7', maxWidth: '52em' } },
+        'What you write, the version of Studex you are running and your macOS version. '
+        + 'Nothing else — not your library, not your notes, not your email address. '
+        + 'The form opens in your browser and you press Submit there, under your own GitHub account, '
+        + 'so you see exactly what is posted before it is public.'),
+    ),
+
+    el('div', { class: 'card glass-card' },
+      el('div', { class: 'section-label plain', text: 'ELSEWHERE' }),
+      row('Everything already reported', el('a', {
+        class: 'btn', href: 'https://github.com/IronMaxi21/Studex-releases/issues',
+        target: '_blank', rel: 'noopener noreferrer', text: 'Open issues',
+      })),
+      row('Something private', el('a', {
+        class: 'btn', href: 'https://github.com/IronMaxi21/Studex-releases/discussions',
+        target: '_blank', rel: 'noopener noreferrer', text: 'Discussions',
+      })),
+      el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6' } },
+        'Issues are public. Anything to do with your account or your payment belongs in a discussion, not an issue.'),
+    ),
   );
 }
 
@@ -647,7 +933,7 @@ function schedulerPanel() {
 
 /** Habits of a sitting, kept on this Mac and applied the next time a deck opens. */
 function studyPrefsPanel() {
-  const host = el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '44px' } });
+  const host = el('div', { class: 'settings-stack' });
   const draw = () => {
     const p = studyPrefs();
     const set = (patch) => { saveStudyPrefs(patch); draw(); };
@@ -758,6 +1044,98 @@ function drawNotifications(host, settings) {
         el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '6px' }, text: note }),
       )),
       status,
+    ),
+  );
+}
+
+/* ── sound ───────────────────────────────────────────────────────────── */
+
+/**
+ * The eight sounds Studex can make, in the order you meet them: press
+ * something, throw a switch, turn a card, get it right, get it wrong, finish,
+ * drop a file, hit a wall.
+ *
+ * They are auditionable because a word is a poor description of a sound —
+ * "wrong" could be anything, and nobody should have to start a test to find
+ * out whether they can live with it.
+ */
+const SFX_KINDS = [
+  { id: 'tap', label: 'Press', hint: 'Buttons, chips, menu items' },
+  { id: 'toggle', label: 'Switch', hint: 'Turning something on or off' },
+  { id: 'flip', label: 'Turn a card', hint: 'Showing the back of a flashcard' },
+  { id: 'right', label: 'Correct', hint: 'A card or question you got right' },
+  { id: 'wrong', label: 'Not quite', hint: 'A card or question you got wrong' },
+  { id: 'finish', label: 'Finished', hint: 'The end of a review, test or lesson' },
+  { id: 'drop', label: 'Dropped', hint: 'A file landing where you dropped it' },
+  { id: 'error', label: 'Blocked', hint: 'Something that could not be done' },
+];
+
+function drawSound(host) {
+  const body = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '18px' } });
+
+  const draw = () => {
+    const p = sfxPrefs();
+    const set = (patch) => { setSfxPrefs(patch); draw(); };
+
+    // Volume applies as it moves and plays as it lands, so the number means
+    // something while you are setting it. It does not redraw the panel — that
+    // would pull the slider out from under the pointer.
+    const volumeValue = el('span', { class: 'range-value', text: `${p.volume}%` });
+    const volume = el('div', { class: 'range-row' },
+      el('input', {
+        type: 'range', class: 'range', min: 0, max: 100, step: 5, value: p.volume,
+        'aria-label': 'Sound effect volume',
+        oninput: (e) => { volumeValue.textContent = `${Number(e.target.value)}%`; },
+        onchange: (e) => {
+          const v = Number(e.target.value);
+          setSfxPrefs({ volume: v });
+          auditionSfx('tap', v);
+        },
+      }),
+      volumeValue,
+    );
+
+    mount(body,
+      row('Sound effects', toggle(p.on, (v) => { set({ on: v }); if (v) auditionSfx('toggle', sfxPrefs().volume); })),
+      el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6' } },
+        'Short tones made in the app itself — nothing is downloaded, and nothing plays while '
+        + 'your Mac is muted. Off unless you turn it on.'),
+
+      p.on ? row('Volume', volume) : null,
+      p.on ? el('div', null,
+        el('div', { class: 'section-label plain', text: 'THE SOUNDS' }),
+        el('div', { class: 'muted', style: { fontSize: '12px', lineHeight: '1.6', marginTop: '6px' },
+          text: 'Press one to hear it.' }),
+        // `data-quiet` so a press here plays the sound it is auditioning and
+        // not the press sound on top of it.
+        el('div', { class: 'sfx-grid', 'data-quiet': '' }, SFX_KINDS.map((kind) => el('button', {
+          class: 'sfx-card', type: 'button',
+          onclick: () => auditionSfx(kind.id, sfxPrefs().volume),
+        }, icon('play', { size: 13 }),
+          el('span', { class: 'label', text: kind.label }),
+          el('span', { class: 'hint', text: kind.hint })))),
+      ) : null,
+
+      p.volume !== SFX_DEFAULTS.volume || p.on !== SFX_DEFAULTS.on
+        ? el('div', null, el('button', {
+            class: 'btn', onclick: () => { setSfxPrefs({ ...SFX_DEFAULTS }); draw(); },
+          }, icon('arrow-counter-clockwise'), 'Reset sound'))
+        : null,
+    );
+  };
+  draw();
+
+  mount(host,
+    el('div', null,
+      el('h2', { class: 'section', text: 'Sound' }),
+      el('div', { class: 'muted', style: { marginTop: '9px', maxWidth: '52em', lineHeight: '1.7' } },
+        'Studex can answer what you do with a sound: a press, a card turning over, a right answer. '
+        + 'It is feedback, not music — for something to work to, Focus has rain, a stream and the rest.'),
+    ),
+    el('div', { class: 'glass-card' }, body),
+    el('div', null,
+      el('button', { class: 'btn', onclick: () => navigate('settings/focus') },
+        icon('waveform'), 'Background sounds in Focus'),
     ),
   );
 }
@@ -995,11 +1373,13 @@ function drawUpdates(host) {
       described('Download updates automatically',
         'New versions download in the background, then Studex asks you to restart. Important fixes always download.',
         toggle(prefs.auto, (on) => set('auto', on))),
-      described('Release channel',
-        prefs.channel === 'beta'
-          ? 'Beta gets new features first, and may be rougher. You still get every stable release.'
-          : 'Stable gets releases once they are finished.',
-        seg(['stable', 'beta'], prefs.channel, (v) => set('channel', v), { stable: 'Stable', beta: 'Beta' })),
+      may('betaChannel')
+        ? described('Release channel',
+            prefs.channel === 'beta'
+              ? 'Beta gets new features first, and may be rougher. You still get every stable release.'
+              : 'Stable gets releases once they are finished.',
+            seg(['stable', 'beta'], prefs.channel, (v) => set('channel', v), { stable: 'Stable', beta: 'Beta' }))
+        : null,
       described('Check for new versions', 'How often Studex looks while it is open.',
         dropdown({
           class: 'input', 'aria-label': 'Check frequency',
@@ -1279,12 +1659,15 @@ function drawAi(host) {
   const models = el('div');
   const calls = el('div', { class: 'ai-calls' });
 
+  // Two audiences: a build of ours, which is being debugged, and the app
+  // people download, where the models behind each feature and the key they
+  // run on are not something to set up or to know about.
+  const intro = el('div', { class: 'muted', style: { marginTop: '9px', maxWidth: '52em', lineHeight: '1.7' } });
+
   mount(host,
     el('div', null,
       el('h2', { class: 'section', text: 'AI' }),
-      el('div', { class: 'muted', style: { marginTop: '9px', maxWidth: '52em', lineHeight: '1.7' } },
-        'Studex calls three Gemini models through Google AI Studio: one reads specifications, one writes, and one checks. '
-        + 'Each has a backup it falls back to when a model is busy. Your key stays on this Mac and is never shown again once saved.'),
+      intro,
     ),
     status,
     models,
@@ -1294,9 +1677,14 @@ function drawAi(host) {
   async function load() {
     let info;
     try { info = await api.aiStatus(); } catch (err) { reportError(err); return; }
+    intro.textContent = info.developer
+      ? 'Studex calls three Gemini models through Google AI Studio: one reads specifications, one writes, and one checks. '
+        + 'Each has a backup it falls back to when a model is busy. Your key stays on this Mac and is never shown again once saved.'
+      : 'Studex writes cards, explains answers and reads specifications for you. It is part of the app — there is nothing to set up '
+        + 'and no key to manage. What is left of this month\u2019s allowance is below.';
     drawStatus(info);
     drawModels(info);
-    void drawCalls();
+    void drawCalls(info);
   }
 
   function drawStatus(info) {
@@ -1311,7 +1699,10 @@ function drawAi(host) {
     const builtIn = info.keySource === 'builtin';
     if (builtIn) field.placeholder = 'Paste your own key to use it instead';
     if (builtIn) save.textContent = 'Use my key';
-    const remove = info.keySource === 'settings' && info.keyEditable
+    // Removable on its own terms: someone who added a key in an older build
+    // has to be able to go back to the one the app brings, even where nothing
+    // else about keys is on offer.
+    const remove = info.keyRemovable
       ? el('button', { class: 'btn', type: 'button', text: 'Remove key' })
       : null;
 
@@ -1347,7 +1738,9 @@ function drawAi(host) {
       };
     }
 
-    const source = info.keySource === 'env'
+    const source = !info.developer
+      ? (info.keySource === 'settings' ? 'Running on the key you added.' : 'Included with Studex.')
+      : info.keySource === 'env'
       ? 'From the server’s environment (GEMINI_API_KEY), which wins over anything saved here.'
       : info.keySource === 'settings'
         ? `Saved on this Mac, ending ${info.keyHint?.replace('…', '') ?? '????'}.`
@@ -1360,11 +1753,21 @@ function drawAi(host) {
       row('Status', el('span', null,
         el('span', { class: 'pill', style: { marginRight: '8px' }, text: info.available ? 'On' : 'Off' }),
         source)),
-      info.keyEditable || info.keySource !== 'env'
+      // Not drawn dead — drawn not at all. In the app people download the key
+      // is ours, the endpoint behind this refuses to change it, and a field
+      // greyed out would only be a question with no answer.
+      info.developer && (info.keyEditable || info.keySource !== 'env')
         ? row('Key', el('div', { class: 'ai-key-row' }, field, save, remove))
         : null,
-      !info.keyEditable && info.keySource !== 'env'
+      info.developer && !info.keyEditable && info.keySource !== 'env'
         ? el('div', { class: 'muted', text: 'This server takes its key from where it is deployed, not from the app.' })
+        : null,
+      // The one key control a release build keeps, and only for someone who
+      // has a key of their own left over.
+      !info.developer && remove
+        ? row('Key', el('div', { class: 'ai-key-row' },
+            el('span', { class: 'muted', text: `Ending ${info.keyHint?.replace('…', '') ?? '????'}. Remove it to go back to the key Studex brings.` }),
+            remove))
         : null,
       message,
       info.usage
@@ -1391,7 +1794,10 @@ function drawAi(host) {
     );
   }
 
-  async function drawCalls() {
+  async function drawCalls(info) {
+    // Every prompt's model, tokens and timing: how the build is debugged, not
+    // something the app ships. /ai/calls refuses it in a release build anyway.
+    if (!info.developer) { mount(calls); return; }
     let list = [];
     try { ({ calls: list } = await api.aiCalls()); } catch { return; }
     const time = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -1523,11 +1929,11 @@ function drawSync(host) {
         : null,
       last?.conflicts
         ? el('div', { class: 'row' },
-            icon('files'),
+            icon('clock-counter-clockwise'),
             el('div', { class: 'grow' },
-              el('div', { text: `${last.conflicts} kept twice` }),
+              el('div', { text: `${last.conflicts} ${last.conflicts === 1 ? 'file' : 'files'} changed in two places` }),
               el('div', { class: 'dim', style: { fontSize: '11px', marginTop: '3px' },
-                text: 'Both Macs had changed the same file. Look for “(from another device)” in your library.' })),
+                text: 'Each is still one file. The version that synced most recently is what it holds — the one it replaced is under “Earlier versions…” in the file’s menu.' })),
           )
         : null,
       last?.error
@@ -1942,13 +2348,31 @@ function shortUserAgent(ua) {
 }
 
 /** Focus mode: how long, and how much of Studex fades away while it runs. */
+function drawFocus(host) {
+  mount(host,
+    el('div', null,
+      el('h2', { class: 'section', text: 'Focus' }),
+      el('div', { class: 'muted', style: { marginTop: '9px', maxWidth: '52em', lineHeight: '1.7' } },
+        'How long a block runs, how long the break is, and how much of Studex gets out of the way while '
+        + 'you work. The focus panel itself only starts and stops — everything you set once is here.'),
+    ),
+    el('div', { class: 'glass-card' }, focusPrefsPanel()),
+  );
+}
+
 function focusPrefsPanel() {
   const host = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '18px' } });
   const slider = (key, min, max, step, unit) => {
     const value = el('span', { class: 'range-value', text: `${focusPrefs()[key]}${unit}` });
     const input = el('input', {
       type: 'range', min, max, step, value: focusPrefs()[key], class: 'range',
-      oninput: (e) => { const v = Number(e.target.value); value.textContent = `${v}${unit}`; setFocusPrefs({ [key]: v }); },
+      oninput: (e) => {
+        const v = Number(e.target.value);
+        value.textContent = `${v}${unit}`;
+        setFocusPrefs({ [key]: v });
+        // The one slider you have to hear to set.
+        if (key === 'soundVolume') setSoundscapeVolume(v / 100);
+      },
     });
     return el('div', { class: 'range-row' }, input, value);
   };
@@ -1957,10 +2381,10 @@ function focusPrefsPanel() {
     const set = (patch) => { setFocusPrefs(patch); draw(); };
     mount(host,
       el('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
-        el('div', { class: 'section-label plain', text: 'FOCUS MODE' }),
+        el('div', { class: 'section-label plain', text: 'BLOCKS AND BREAKS' }),
         el('button', { class: 'btn', style: { marginLeft: 'auto' }, onclick: () => openFocus() }, icon('arrows-out-simple'), 'Open focus'),
       ),
-      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '44px' } },
+      el('div', { class: 'settings-stack' },
         el('div', { style: { display: 'flex', flexDirection: 'column', gap: '18px' } },
           row('Focus length', slider('minutes', 5, 120, 5, ' min')),
           row('Break length', slider('breakMinutes', 1, 30, 1, ' min')),
@@ -1976,10 +2400,44 @@ function focusPrefsPanel() {
             '⌘⇧F opens or minimises focus from anywhere. Minimised, it sits in the corner and keeps counting.'),
         ),
       ),
+      el('div', { class: 'section-label plain', text: 'BACKGROUND SOUND' }),
+      soundscapeRow(p, set),
+      el('div', { class: 'settings-stack' },
+        row('Volume', slider('soundVolume', 0, 100, 5, '%')),
+        row('Keep playing through breaks', toggle(p.soundBreak, (v) => set({ soundBreak: v }))),
+      ),
     );
   };
   draw();
   return host;
+}
+
+/**
+ * The soundscape picker.
+ *
+ * Pressing one plays it straight away, whether or not the timer is running —
+ * you cannot choose between rain and a stream by reading the words, and a
+ * picker you have to start a study session to audition is no picker at all.
+ * Whatever is playing here stops when the page is left.
+ */
+let audition = null;
+
+function soundscapeRow(prefs, set) {
+  return el('div', { class: 'sound-grid' }, SOUNDSCAPES.map((sound) => el('button', {
+    class: 'sound-card' + (prefs.sound === sound.id ? ' on' : ''),
+    title: sound.hint,
+    'aria-pressed': prefs.sound === sound.id ? 'true' : 'false',
+    onclick: () => {
+      set({ sound: sound.id });
+      clearTimeout(audition);
+      if (sound.id === 'off') { releaseSoundscape(); return; }
+      auditionSoundscape(sound.id, focusPrefs().soundVolume / 100);
+      // A sample, not a session. Long enough to tell rain from a stream, then
+      // it stops on its own — nobody should have to remember to turn Settings
+      // off. A focus block that starts meanwhile takes the sound over.
+      audition = setTimeout(() => releaseSoundscape(), 14_000);
+    },
+  }, icon(sound.icon, { size: 19 }), el('span', { class: 'label', text: sound.label }), el('span', { class: 'hint', text: sound.hint }))));
 }
 
 /** A density slider that applies as it moves, without redrawing the page under the pointer. */

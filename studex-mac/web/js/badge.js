@@ -20,7 +20,7 @@
  */
 import { api } from './api.js';
 import { state } from './store.js';
-import { isNative, setDockBadge, setNextLesson } from './native.js';
+import { isNative, setDockBadge, setNextLesson, setStudyProgress } from './native.js';
 import { log } from './log.js';
 
 /** Slow on purpose: the number changes when the day turns over, or when the
@@ -45,7 +45,11 @@ export async function refreshDue() {
   if (!state.user || !state.ready) return;
   const { today } = await api.studyToday();
   reportDue(today?.remaining ?? 0);
-  if (isNative) await refreshNextLesson().catch((err) => log.warn('next lesson failed', err));
+  if (!isNative) return;
+  // The same answer already carries what the menu bar wants to show under the
+  // count, so it goes out from here rather than from a fetch of its own.
+  setStudyProgress({ reviewed: today?.reviewed_today ?? 0, streak: today?.streak_days ?? 0 });
+  await refreshNextLesson().catch((err) => log.warn('next lesson failed', err));
 }
 
 /** The first lesson still to start today, as "Maths · 10:05 · Room 4". */
@@ -84,4 +88,5 @@ export function stopBadge() {
   shown = 0;
   setDockBadge(0);
   setNextLesson('');
+  setStudyProgress({ reviewed: 0, streak: 0 });
 }

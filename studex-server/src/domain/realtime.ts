@@ -74,6 +74,16 @@ interface Live {
   quietUntil: number;
   /** A subscription attempt in flight; a second tick must not start another. */
   opening: boolean;
+  /**
+   * Which attempt the account is on.
+   *
+   * A socket that has gone away can still report itself, late, after this
+   * account has already been given a new one — the callback belongs to the old
+   * attempt and closes over nothing that would tell it so. The number is
+   * stamped on each attempt and checked before anything is acted on, so a
+   * straggler from a previous socket cannot pull down the live one.
+   */
+  watchId: number;
 }
 
 const live = new Map<string, Live>();
@@ -244,6 +254,7 @@ export async function reconcileWatchers(
         failures: 0,
         quietUntil: 0,
         opening: false,
+        watchId: 0,
       };
       live.set(candidate.userId, entry);
     }
@@ -268,6 +279,8 @@ export async function reconcileWatchers(
     if (now < entry.quietUntil) continue;
 
     entry.opening = true;
+    entry.watchId += 1;
+    const watchId = entry.watchId;
     try {
       const token = await tokens(candidate.userId);
       if (!token) {
@@ -278,10 +291,15 @@ export async function reconcileWatchers(
       const handle = await libraryWatcher().watch({
         supabaseUserId: candidate.supabaseUserId,
         accessToken: token.accessToken,
-        onChange: () => noteRealtimeChange(userId),
+        onChange: () => {
+          if (live.get(userId)?.watchId !== watchId) return;
+          noteRealtimeChange(userId);
+        },
         onDropped: (reason) => {
           const current = live.get(userId);
-          if (!current) return;
+          // Not this account's current socket: an older one reporting late,
+          // after the account had already been given another.
+          if (!current || current.watchId !== watchId) return;
           drop(current, Date.now());
           log?.warn({ userId, reason }, 'library subscription dropped');
         },

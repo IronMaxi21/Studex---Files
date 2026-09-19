@@ -3,9 +3,10 @@
  *
  * A block's text stays a plain string: bold is `**like this**`, italic
  * `*like this*`, underline `__like this__`, highlight `==like this==` (with an
- * optional colour, `==lime|like this==`) and code `` `like this` ``. A
- * reference to another page is `[[Title]]`, a tag is `##name`, and a cloze
- * deletion — a phrase blanked out for recall — is `{like this}`.
+ * optional colour, `==lime|like this==`), coloured text `%%rose|like this%%`
+ * and code `` `like this` ``. A reference to another page is `[[Title]]`, a
+ * tag is `##name`, and a cloze deletion — a phrase blanked out for recall — is
+ * `{like this}`.
  *
  * Storing the marks in the text keeps documents diffable, searchable and free
  * of any markup the client would have to trust — the editor renders them, and
@@ -20,6 +21,9 @@ export interface InlineSegment {
   underline?: boolean;
   highlight?: boolean;
   hue?: string;
+  color?: boolean;
+  /** The colour the words themselves are written in, when the run is `%% %%`. */
+  ink?: string;
   code?: boolean;
   cloze?: boolean;
   /** The page this run names, when the run is inside `[[ ]]`. */
@@ -28,13 +32,14 @@ export interface InlineSegment {
   tag?: string;
 }
 
-type MarkKey = 'bold' | 'underline' | 'highlight' | 'italic' | 'code';
+type MarkKey = 'bold' | 'underline' | 'highlight' | 'color' | 'italic' | 'code';
 
 /** Longest first, so `**` is never read as two italics. */
 const MARKS: { token: string; key: MarkKey }[] = [
   { token: '**', key: 'bold' },
   { token: '__', key: 'underline' },
   { token: '==', key: 'highlight' },
+  { token: '%%', key: 'color' },
   { token: '*', key: 'italic' },
   { token: '`', key: 'code' },
 ];
@@ -44,6 +49,16 @@ const MARKS: { token: string; key: MarkKey }[] = [
  * theme decides what each one looks like. The first is the default.
  */
 export const HIGHLIGHTS = ['amber', 'lime', 'sky', 'rose', 'violet'];
+
+/**
+ * The colours the words themselves can be written in. The same names as a
+ * highlight, plus `grey` for writing that matters less — which is a thing to
+ * do to text and not a thing to do with a highlighter.
+ *
+ * A colour must be named: `%%word%%` names none, so it stays two pairs of
+ * per-cent signs rather than becoming a mark nobody asked for.
+ */
+export const INKS = ['amber', 'lime', 'sky', 'rose', 'violet', 'grey'];
 
 const LINK_OPEN = '[[';
 const LINK_CLOSE = ']]';
@@ -103,17 +118,26 @@ export function parseInline(text: string, active: Omit<InlineSegment, 'text'> = 
     if (mark) {
       const close = text.indexOf(mark.token, i + mark.token.length);
       if (close > i + mark.token.length) {
-        flush();
         let from = i + mark.token.length;
         let hue: string | undefined;
-        if (mark.key === 'highlight') {
-          const named = HUE_RE.exec(text.slice(from, close));
-          if (named?.[1] && HIGHLIGHTS.includes(named[1])) {
-            hue = named[1];
-            from += named[0].length;
-          }
+        let ink: string | undefined;
+        const named = HUE_RE.exec(text.slice(from, close));
+        if (mark.key === 'highlight' && named?.[1] && HIGHLIGHTS.includes(named[1])) {
+          hue = named[1];
+          from += named[0].length;
         }
-        const inner = { ...active, [mark.key]: true, ...(hue ? { hue } : {}) };
+        if (mark.key === 'color') {
+          if (!named?.[1] || !INKS.includes(named[1])) {
+            // Not a colour anyone chose, so it is not a mark.
+            buffer += text[i];
+            i += 1;
+            continue;
+          }
+          ink = named[1];
+          from += named[0].length;
+        }
+        flush();
+        const inner = { ...active, [mark.key]: true, ...(hue ? { hue } : {}), ...(ink ? { ink } : {}) };
         if (mark.key === 'code') {
           if (close > from) out.push({ text: text.slice(from, close), ...inner });
         } else {

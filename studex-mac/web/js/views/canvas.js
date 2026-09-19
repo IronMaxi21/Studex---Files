@@ -6,10 +6,11 @@ import { navigate, paneIsActive } from '../router.js';
 import { topbar, fileCrumbs, pageMenu, fileItems } from '../shell.js';
 import { openMenu } from '../menu.js';
 import { promptText } from '../dialog.js';
-import { relative } from '../format.js';
+import { relative, FILE_ICON } from '../format.js';
 import { onPrint } from '../print.js';
 import { onSmartMagnify } from '../native.js';
-import { carriesBlock, readBlock } from '../dnd.js';
+import { sfx } from '../sfx.js';
+import { carriesBlock, readBlock, carriesItem, readItem, routeFor } from '../dnd.js';
 import {
   shapeSvg, arrowHead, edgePoint, elbowPoints, curvedPath, curveMidpoint, dashFor,
   SHAPES,
@@ -61,6 +62,9 @@ const MIND_NODE = { width: 180, height: 62 };
  * way.
  */
 const PRINT_BOX = { width: 688, height: 642 };
+
+/** What a linked file calls itself on the plane. */
+const LINK_KINDS = { doc: 'NOTE', pdf: 'PDF', deck: 'DECK', canvas: 'CANVAS' };
 const PRINT_MARGIN = 12;
 
 /**
@@ -622,12 +626,48 @@ export async function canvasView(route, host) {
 
   const stopSmartZoom = onSmartMagnify(smartZoom);
 
-  // A line dragged out of a document lands as a sticky note where it is let go.
+  // A line dragged out of a document lands as a sticky note where it is let go;
+  // a file dragged out of the library lands as a card that opens it.
   stage.addEventListener('dragover', (event) => {
-    if (!carriesBlock(event)) return;
+    if (!carriesBlock(event) && !carriesItem(event)) return;
     event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    if (event.dataTransfer) event.dataTransfer.dropEffect = carriesItem(event) ? 'link' : 'copy';
   });
+
+  /** How wide a dropped file stands on the plane. */
+  const LINK_SIZE = { width: 210, height: 84 };
+
+  stage.addEventListener('drop', (event) => {
+    if (!carriesItem(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const item = readItem(event);
+    const dropped = (item?.items ?? (item ? [item] : []))
+      .filter((one) => one.kind === 'file' && one.id !== fileId);
+    if (!dropped.length) {
+      if (item?.id === fileId) toast('That is this canvas.');
+      return;
+    }
+    const at = toCanvas(event.clientX, event.clientY);
+    // Several at once come down in a column, in the order they were picked up,
+    // rather than in one pile that has to be dealt out by hand.
+    dropped.forEach((one, i) => {
+      objects.push({
+        id: crypto.randomUUID(), type: 'link',
+        x: round(at.x - LINK_SIZE.width / 2),
+        y: round(at.y - LINK_SIZE.height / 2 + i * (LINK_SIZE.height + 12)),
+        ...LINK_SIZE,
+        fileId: one.id,
+        title: fileById(one.id)?.title ?? one.title ?? 'Untitled',
+      });
+    });
+    select(objects[objects.length - 1].id);
+    queue();
+    drawObjects();
+    sfx('drop');
+    toast(dropped.length === 1 ? 'Added to the canvas.' : `${dropped.length} added to the canvas.`);
+  });
+
   stage.addEventListener('drop', (event) => {
     if (!carriesBlock(event)) return;
     event.preventDefault();
@@ -1921,6 +1961,26 @@ export async function canvasView(route, host) {
       node.appendChild(el('div', { class: 'back', text: object.quotedText ?? '' }));
     } else if (object.type === 'image') {
       node.appendChild(el('div', { class: 'kicker' }, object.alt ?? 'IMAGE'));
+    } else if (object.type === 'link') {
+      // The title is read fresh from the library, so renaming a note renames
+      // it here too; the stored one is the fallback for a file that has gone.
+      const target = fileById(object.fileId);
+      const kind = target?.kind ?? 'doc';
+      node.classList.toggle('missing', !target);
+      node.append(
+        el('div', { class: 'kicker' }, icon(FILE_ICON[kind] ?? 'file', { size: 12 }),
+          target ? LINK_KINDS[kind] ?? 'FILE' : 'DELETED'),
+        el('div', { class: 'link-title', text: target?.title || object.title || 'Untitled' }),
+        target
+          ? el('button', {
+              class: 'link-open', type: 'button', title: `Open ${target.title || 'Untitled'}`,
+              // The pointer press is stopped as well: on an object, a press is
+              // the start of a drag, and the button would never see the click.
+              onpointerdown: (event) => event.stopPropagation(),
+              onclick: (event) => { event.stopPropagation(); navigate(routeFor({ kind: 'file', id: object.fileId, fileKind: kind })); },
+            }, icon('arrow-up-right', { size: 12 }))
+          : null,
+      );
     }
 
     return node;
@@ -2109,12 +2169,13 @@ export async function canvasView(route, host) {
     // is never about one thing while the handles are on another.
     if (!picked.has(object.id)) { select(object.id); drawObjects(); }
     const many = picked.size > 1;
-    const tintable = object.type !== 'flashcard' && object.type !== 'pdf_excerpt' && object.type !== 'image';
+    const tintable = object.type !== 'flashcard' && object.type !== 'pdf_excerpt'
+      && object.type !== 'image' && object.type !== 'link';
     const linear = object.type === 'line' || object.type === 'connector';
     const only = (test, row) => (!many && test ? row : null);
 
     openMenu({ x, y }, [
-      { head: many ? `${picked.size} SELECTED` : object.type === 'pdf_excerpt' ? 'PDF EXCERPT' : object.type.toUpperCase() },
+      { head: many ? `${picked.size} SELECTED` : object.type === 'pdf_excerpt' ? 'PDF EXCERPT' : object.type === 'link' ? 'LINKED FILE' : object.type.toUpperCase() },
       tintable ? {
         swatches: NOTE_COLORS.map((role) => ({
           color: colorValue(role), label: colorLabel(role), on: object.color === role,

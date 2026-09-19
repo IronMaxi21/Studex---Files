@@ -116,10 +116,13 @@ final class StudexWindow: NSObject, NSWindowDelegate {
 
     /// Takes the page back out, for a backend that has stopped and is coming
     /// back: the route is kept, so the restart returns to the same screen.
-    func showLaunch() {
+    func showLaunch(message: String = "Starting Studex…") {
+        // Already waiting: leaving the view alone keeps the spinner spinning
+        // rather than restarting its animation on every status change.
+        if controller == nil, window.contentView is LaunchView { return }
         let frame = window.frame
         window.contentViewController = nil
-        window.contentView = LaunchView(theme: theme)
+        window.contentView = LaunchView(theme: theme, message: message)
         window.setFrame(frame, display: true)
         controller = nil
     }

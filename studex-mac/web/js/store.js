@@ -8,6 +8,12 @@ export const state = {
   user: null,
   settings: null,
   device: null,
+  /**
+   * What this build offers. Filled in at sign-in; until then, and if the call
+   * ever fails, every screen is drawn — the flags take things away, so a
+   * missing answer must not be the one that takes the app apart.
+   */
+  capabilities: { channel: 'dev', developer: true, layoutChoice: true, betaChannel: true },
   subjects: [],
   folders: [],
   files: [],
@@ -108,6 +114,11 @@ async function runLoadTags() {
   } catch { /* keep what was there */ }
 }
 
+/** Whether this build offers something: `may('layoutChoice')`. */
+export function may(name) {
+  return state.capabilities?.[name] !== false;
+}
+
 /** The tags on one folder or file, in name order. */
 export function tagsOnItem(id) {
   const ids = state.tagsByItem.get(id);
@@ -116,12 +127,17 @@ export function tagsOnItem(id) {
 }
 
 export async function loadSettings() {
-  const [account, device] = await Promise.all([
+  const [account, device, build] = await Promise.all([
     api.settings(),
     api.deviceSettings(deviceId()),
+    // Older servers have no such route. The app is the newer half of the pair
+    // often enough — a build talking to a library it has just updated past —
+    // that a 404 here means "no limits known", not "no app".
+    api.capabilities().catch(() => null),
   ]);
   state.settings = account.settings;
   state.device = device.settings;
+  if (build?.capabilities) state.capabilities = build.capabilities;
   applyTheme();
   notify();
 }
@@ -149,15 +165,22 @@ export function applyTheme() {
   // colouring on, Study takes the second and the planning screens the third.
   const extra = accentPrefs();
   const HEX = /^#[0-9a-fA-F]{6}$/;
+  // Organic is the one family that owns its own colour. Its whole point is a
+  // set of pigments that belong together — clay, moss, ink on paper — and an
+  // arbitrary accent dropped into that is the one thing that makes it stop
+  // looking like paper. So the three accents are left to the stylesheet here,
+  // and Settings hides the pickers rather than offering a control that does
+  // nothing. Every other family takes the account's accent as before.
+  const fixedAccent = themeFamily() === 'organic';
   for (const [name, hex] of [['--color-accent-2', extra.secondary], ['--color-accent-3', extra.tertiary]]) {
-    if (hex && HEX.test(hex)) root.style.setProperty(name, hex);
+    if (!fixedAccent && hex && HEX.test(hex)) root.style.setProperty(name, hex);
     else root.style.removeProperty(name);
   }
   const section = root.dataset.section;
   let effective = accent && HEX.test(accent) ? accent : null;
   if (extra.sections && section === 'study' && extra.secondary) effective = extra.secondary;
   if (extra.sections && section === 'plan' && extra.tertiary) effective = extra.tertiary;
-  if (effective && HEX.test(effective)) root.style.setProperty('--color-accent', effective);
+  if (!fixedAccent && effective && HEX.test(effective)) root.style.setProperty('--color-accent', effective);
   else root.style.removeProperty('--color-accent');
 
   document.body.dataset.density = state.device?.density ?? 'compact';
@@ -176,7 +199,14 @@ export function applyTheme() {
   // flashcard face.
   root.dataset.docFont = state.device?.doc_font ?? 'system';
   root.dataset.lineSpacing = state.device?.line_spacing ?? 'normal';
-  root.dataset.glass = glassEnabled() ? 'on' : 'off';
+  // The family is the *material* the app is made of; light/dark, the accent,
+  // the palettes and high contrast all sit on top of it unchanged.
+  const family = themeFamily();
+  root.dataset.themeFamily = family;
+  // Glass is what the glass family is. Leaving the toggle able to switch it off
+  // would let someone pick the frosted theme and then turn the frost off, which
+  // leaves a theme that is nothing in particular.
+  root.dataset.glass = (family === 'glass' || glassEnabled()) && !transparencyReduced() ? 'on' : 'off';
   root.dataset.contrast = highContrast() ? 'high' : 'normal';
   if (state.device?.reduce_motion) root.dataset.reduceMotion = 'true';
   else delete root.dataset.reduceMotion;
@@ -186,9 +216,52 @@ window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', ()
   if (state.settings?.theme === 'system') applyTheme();
 });
 
+// Reduce Transparency can be turned on with Studex already open, and the point
+// of turning it on is that it takes effect now.
+try {
+  window.matchMedia('(prefers-reduced-transparency: reduce)').addEventListener('change', () => applyTheme());
+} catch { /* an older WebKit that has no opinion on the matter */ }
+
+const FAMILY_KEY = 'studex.themeFamily';
+/** The three shipped materials. Anything else saved falls back to the default. */
+export const THEME_FAMILIES = ['default', 'organic', 'glass'];
+
+/**
+ * Which of the three visual families the app is wearing.
+ *
+ * A family re-grounds the neutrals, the corner radii and the typeface — the
+ * material — and deliberately touches nothing else: light and dark, the
+ * account's accent, the saved palettes and high contrast are all orthogonal
+ * to it and keep working exactly as they did. Kept per device, beside the
+ * glass and contrast settings, because it is about this screen.
+ */
+export function themeFamily() {
+  try {
+    const saved = localStorage.getItem(FAMILY_KEY);
+    return THEME_FAMILIES.includes(saved) ? saved : 'default';
+  } catch { return 'default'; }
+}
+export function setThemeFamily(name) {
+  const next = THEME_FAMILIES.includes(name) ? name : 'default';
+  try { localStorage.setItem(FAMILY_KEY, next); } catch { /* this sitting only */ }
+  applyTheme();
+}
+
 const GLASS_KEY = 'studex.glass';
+/**
+ * Whether the machine has been told to keep interfaces opaque.
+ *
+ * System Settings → Accessibility → Display → Reduce Transparency. Someone who
+ * has asked for that has asked every app, and an app that carries on frosting
+ * its sidebar is not honouring the setting — so this beats the in-app toggle
+ * rather than sitting beside it in Settings as a second switch to find.
+ */
+export function transparencyReduced() {
+  try { return window.matchMedia('(prefers-reduced-transparency: reduce)').matches; } catch { return false; }
+}
 /** Frosted, translucent floating surfaces; on unless turned off on this device. */
 export function glassEnabled() {
+  if (transparencyReduced()) return false;
   try { return localStorage.getItem(GLASS_KEY) !== 'off'; } catch { return true; }
 }
 export function setGlassEnabled(on) {
@@ -269,7 +342,7 @@ export function setAccentSection(head) {
 
 const HOME_KEY = 'studex.home';
 /** The dashboard panels, in their default order. Home reads this to lay itself out. */
-export const HOME_PANELS = ['continue', 'needs', 'plan', 'timer', 'deadlines'];
+export const HOME_PANELS = ['continue', 'today', 'preview', 'library', 'needs', 'plan', 'timer', 'deadlines'];
 /**
  * How this device arranges the Home dashboard: an ordered list of
  * `{ id, visible }`, kept per device. A phone-sized laptop and a big desktop

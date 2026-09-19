@@ -83,6 +83,44 @@ export const supabaseWatcher: LibraryWatcher = {
         () => onChange(),
       );
 
+    /**
+     * This subscription is over — for any reason, once.
+     *
+     * Everything below hangs off this flag, and it is the whole reason this
+     * file has a state machine in it at all. A channel does not report a lost
+     * connection once: supabase-js keeps trying to rejoin on its own, and every
+     * attempt that fails calls this status callback again. Worse, tearing the
+     * channel down is itself reported as `CLOSED`, so the obvious shape —
+     * report the drop, and have the supervisor close the handle — is a loop
+     * that feeds itself. It did exactly that: thousands of identical
+     * "library subscription dropped" lines in the same millisecond, a websocket
+     * client leaked on each pass, and a backend that eventually stopped
+     * answering. A drop is one event, the first one, and after it this handle
+     * says nothing more.
+     */
+    let finished = false;
+
+    /**
+     * Lets go of the socket and the client behind it.
+     *
+     * Both halves matter: removing the channel stops the rejoin timer, and
+     * disconnecting releases the websocket. Leaving the client alive means one
+     * more socket quietly retrying forever for every drop of the day.
+     */
+    const teardown = async (): Promise<void> => {
+      try {
+        await sb.removeChannel(channel);
+      } catch {
+        // Already gone, or gone in the middle of going. Either way there is
+        // nothing left to release and nothing useful to say about it.
+      }
+      try {
+        await sb.realtime.disconnect();
+      } catch {
+        // As above.
+      }
+    };
+
     await new Promise<void>((resolve, reject) => {
       let settled = false;
       channel.subscribe((status, err) => {
@@ -92,7 +130,12 @@ export const supabaseWatcher: LibraryWatcher = {
         }
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           const reason = err?.message ?? status;
-          if (!settled) { settled = true; reject(new Error(reason)); return; }
+          if (!settled) { settled = true; finished = true; void teardown(); reject(new Error(reason)); return; }
+          if (finished) return;
+          finished = true;
+          // Torn down before the supervisor hears about it, so that by the time
+          // it decides to reopen there is nothing of this attempt left running.
+          void teardown();
           onDropped(reason);
         }
       });
@@ -100,11 +143,13 @@ export const supabaseWatcher: LibraryWatcher = {
 
     return {
       setToken(token) {
+        if (finished) return;
         sb.realtime.setAuth(token);
       },
       async close() {
-        await sb.removeChannel(channel);
-        void sb.realtime.disconnect();
+        if (finished) return;
+        finished = true;
+        await teardown();
       },
     };
   },

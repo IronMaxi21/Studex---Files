@@ -101,18 +101,24 @@ export function renderMath(target, latex, { display = true } = {}) {
 }
 
 /**
- * Does this string carry any inline maths? Cheap enough to gate the mixed
- * renderer on, so a card with no `$` pays nothing for the LaTeX support.
+ * Does this string carry any maths? Cheap enough to gate the mixed renderer
+ * on, so a card with no equation in it pays nothing for the LaTeX support.
+ *
+ * Both notations count. `$…$` is what the app's own editors write, and
+ * `\(…\)` / `\[…\]` is what a language model writes unless it is told
+ * otherwise — and since the tutor's answers come through here, being strict
+ * about the delimiter would mean showing a student raw backslashes.
  */
 export function hasMath(text) {
-  return /(?<!\\)\$/.test(String(text ?? ''));
+  return /(?<!\\)\$|\\[([]/.test(String(text ?? ''));
 }
 
 /**
- * Splits a line into text and maths runs. `$$…$$` is a display equation on its
- * own line, `$…$` is inline; a `\$` is a literal dollar and never a delimiter.
- * Unterminated delimiters are treated as plain text, because a half-typed `$`
- * should read as a dollar sign, not swallow the rest of the card.
+ * Splits a line into text and maths runs. `$$…$$` and `\[…\]` are display
+ * equations, `$…$` and `\(…\)` are inline; a `\$` is a literal dollar and
+ * never a delimiter. Unterminated delimiters are treated as plain text,
+ * because a half-typed `$` should read as a dollar sign rather than swallow
+ * the rest of the card.
  */
 export function mathSegments(text) {
   const src = String(text ?? '');
@@ -123,6 +129,19 @@ export function mathSegments(text) {
   while (i < src.length) {
     const ch = src[i];
     if (ch === '\\' && src[i + 1] === '$') { plain += '$'; i += 2; continue; }
+    // LaTeX's own delimiters, which is what a model emits. Handled before the
+    // dollar case so that `\[ x = \$5 \]` stays one equation.
+    if (ch === '\\' && (src[i + 1] === '[' || src[i + 1] === '(')) {
+      const display = src[i + 1] === '[';
+      const close = src.indexOf(display ? '\\]' : '\\)', i + 2);
+      if (close !== -1) {
+        const latex = src.slice(i + 2, close);
+        if (latex.trim()) { flush(); out.push({ type: display ? 'display' : 'inline', value: latex }); }
+        else plain += src.slice(i, close + 2);
+        i = close + 2;
+        continue;
+      }
+    }
     if (ch === '$') {
       const display = src[i + 1] === '$';
       const open = display ? '$$' : '$';

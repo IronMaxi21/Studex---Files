@@ -63,6 +63,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       token: session.token,
       csrfToken: session.csrfToken,
       expiresAt: session.expiresAt,
+      // An account holds one live session, so a sign-in here may have ended
+      // one elsewhere. The client says so rather than leaving it a mystery.
+      signedOutElsewhere: session.signedOutElsewhere,
     });
   });
 
@@ -80,6 +83,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       token: session.token,
       csrfToken: session.csrfToken,
       expiresAt: session.expiresAt,
+      // An account holds one live session, so a sign-in here may have ended
+      // one elsewhere. The client says so rather than leaving it a mystery.
+      signedOutElsewhere: session.signedOutElsewhere,
     });
   });
 

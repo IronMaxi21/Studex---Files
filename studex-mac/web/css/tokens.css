@@ -6,23 +6,27 @@
    ══════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --color-bg: #161826;
-  --color-surface: #232532;
-  --color-text: #e9e9ed;
+  /* The ground is warm rather than blue. A cold navy reads as a screen; a
+     warm near-black reads as a desk, and every accent — including a student's
+     own — sits on it as ink rather than as light. The accent family is
+     unchanged: it is theirs to set, and the website and the icon carry it. */
+  --color-bg: #1a1b19;
+  --color-surface: #242521;
+  --color-text: #ecebe4;
   --color-accent: #8a88b8;
   --color-accent-2: #a2a1c4;
   --color-accent-3: #739f8c;
   --color-divider: color-mix(in srgb, var(--color-text) 16%, transparent);
 
-  --color-neutral-100: #f3f5fe;
-  --color-neutral-200: #e4e7f5;
-  --color-neutral-300: #cfd3e5;
-  --color-neutral-400: #b2b6ca;
-  --color-neutral-500: #9397ab;
-  --color-neutral-600: #75798c;
-  --color-neutral-700: #595d6c;
-  --color-neutral-800: #3f424d;
-  --color-neutral-900: #292b31;
+  --color-neutral-100: #f7f6f1;
+  --color-neutral-200: #e9e7df;
+  --color-neutral-300: #d4d1c7;
+  --color-neutral-400: #b6b3a8;
+  --color-neutral-500: #97958b;
+  --color-neutral-600: #7a786f;
+  --color-neutral-700: #5d5c55;
+  --color-neutral-800: #43433d;
+  --color-neutral-900: #2c2c28;
 
   /* The accent ramp is generated from --color-accent so that changing the
      accent in Settings moves every step with it, exactly as the design's note
@@ -138,23 +142,23 @@ body[data-density='comfortable'] {
 /* Light re-grounds the ramp: neutrals invert, the accent keeps its hue but
    darkens enough to hold contrast on a pale surface. */
 :root[data-theme='light'] {
-  --color-bg: #f7f8fc;
-  --color-surface: #ffffff;
-  --color-text: #1b1d27;
+  --color-bg: #f8f7f2;
+  --color-surface: #fffefb;
+  --color-text: #1d1d19;
   --color-accent: #4f4d86;
 
-  --color-neutral-100: #292b31;
-  --color-neutral-200: #3f424d;
-  --color-neutral-300: #595d6c;
-  --color-neutral-400: #5c6070;
-  --color-neutral-500: #6f7385;
-  --color-neutral-600: #8a8fa1;
-  --color-neutral-700: #c3c7d6;
-  --color-neutral-800: #dfe2ee;
-  --color-neutral-900: #eef0f7;
+  --color-neutral-100: #2c2c28;
+  --color-neutral-200: #43433d;
+  --color-neutral-300: #5d5c55;
+  --color-neutral-400: #605f57;
+  --color-neutral-500: #73716a;
+  --color-neutral-600: #8d8b83;
+  --color-neutral-700: #c8c5bb;
+  --color-neutral-800: #e3e0d7;
+  --color-neutral-900: #f0eee7;
 
   /* Accent text darkens and accent fills lighten — see the ramp note above. */
-  --accent-fg-mix: #16182a;
+  --accent-fg-mix: #1b1b17;
   --accent-bg-mix: #ffffff;
 
   --color-divider: color-mix(in srgb, var(--color-text) 14%, transparent);
@@ -165,10 +169,175 @@ body[data-density='comfortable'] {
   --rail-bg: color-mix(in srgb, var(--color-bg) 98%, #000);
 
   --shadow-sm: 0 0 0 1px var(--color-neutral-800);
-  --shadow-md: 0 0 0 1px var(--color-neutral-800), 0 6px 18px rgba(24, 26, 40, 0.10);
-  --shadow-lg: 0 0 0 1px var(--color-neutral-700), 0 16px 40px rgba(24, 26, 40, 0.16);
+  --shadow-md: 0 0 0 1px var(--color-neutral-800), 0 6px 18px rgba(34, 32, 24, 0.10);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-700), 0 16px 40px rgba(34, 32, 24, 0.16);
 
   --folder-l: 0.58;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Theme families.
+
+   A family is the *material* the app is made of: the ground it is cut from,
+   how sharply its corners are turned, which typeface sets its headings, and
+   how much light passes through a floating pane. Deliberately, it is only
+   those things. Light and dark, the account's accent, the saved palettes,
+   density, the reading face and high contrast are all orthogonal to it and go
+   on working exactly as they did — pick Organic and you still get a dark mode,
+   still get your accent, still get every palette.
+
+   Three ship: `default` (Nocturne, unchanged — it declares nothing here, which
+   is what makes it the default), `organic` and `glass`.
+
+   ── the cascade ───────────────────────────────────────────────────────────
+   Colour is the one thing a family shares ownership of, because both contrast
+   mechanisms re-ground exactly these tokens. A family must beat the base theme
+   and lose to contrast, and the two contrast blocks below are written at
+   (0,1,0) and (0,2,0) — so a family colour block written the obvious way, as
+   `:root[data-theme-family='organic']`, would come in at (0,2,0), outrank
+   `@media (prefers-contrast: more) :root`, and silently switch the OS's
+   Increase Contrast off for anyone not on the default family.
+
+   So the family selector is wrapped in `:where()`, which contributes nothing
+   to specificity. `:root:where([data-theme-family='organic'])` is (0,1,0) —
+   the same weight as a bare `:root`, winning only because it is further down
+   the file, and losing to everything below that is written heavier. Family
+   over theme, contrast over family, with no token declared twice.
+
+   Shape and type have no such conflict: nothing else in this file touches a
+   radius or a typeface, so those are declared plainly.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── organic ───────────────────────────────────────────────────────────────
+   Paper, not screen. The ground is pressed further toward clay than Nocturne's
+   already-warm near-black, the corners open up until a panel reads as a card
+   laid down rather than a region drawn on, and headings are set in the serif
+   macOS already has, which does more to change the app's voice than any colour
+   does. Running text stays in Inter: a workspace this dense is read in columns
+   of twelve-pixel labels, and a serif at that size is a nice idea for about a
+   day. Shadows are mixed toward brown so a lifted surface looks like it is
+   above paper instead of above glass. */
+:root[data-theme-family='organic'] {
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+
+  --font-heading: ui-serif, 'New York', 'Iowan Old Style', Palatino, Georgia, serif;
+  --font-cards: var(--font-heading);
+}
+:root:where([data-theme-family='organic']) {
+  /* The one family that brings its own pigments. Clay, moss and a slate
+     eucalyptus — three colours that were already going to sit next to each
+     other on a page of paper. Settings hides the accent pickers for this
+     family and store.js stops writing the account's accent over the top, so
+     these are the values that are actually used, not defaults waiting to be
+     replaced. */
+  --color-accent: #9fb383;
+  --color-accent-2: #d29a6b;
+  --color-accent-3: #83a8a2;
+
+  --color-bg: #1b1815;
+  --color-surface: #26221e;
+  --color-text: #efe7db;
+  --color-divider: color-mix(in srgb, var(--color-text) 15%, transparent);
+
+  --color-neutral-100: #faf6ee;
+  --color-neutral-200: #ece5d8;
+  --color-neutral-300: #d8cfbe;
+  --color-neutral-400: #bdb2a0;
+  --color-neutral-500: #9d9384;
+  --color-neutral-600: #80776a;
+  --color-neutral-700: #625a50;
+  --color-neutral-800: #48423a;
+  --color-neutral-900: #302b25;
+
+  --shadow-sm: 0 0 0 1px var(--color-neutral-800);
+  --shadow-md: 0 0 0 1px var(--color-neutral-800), 0 8px 22px rgba(20, 12, 4, 0.5);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-700), 0 20px 46px rgba(20, 12, 4, 0.62);
+}
+:root[data-theme='light']:where([data-theme-family='organic']) {
+  /* The same three pigments, ground darker so they hold against paper. */
+  --color-accent: #5d7544;
+  --color-accent-2: #a2603a;
+  --color-accent-3: #3d6a65;
+
+  --color-bg: #f3ece0;
+  --color-surface: #fffcf5;
+  --color-text: #241e17;
+  --color-divider: color-mix(in srgb, var(--color-text) 13%, transparent);
+
+  --color-neutral-100: #302b25;
+  --color-neutral-200: #48423a;
+  --color-neutral-300: #625a50;
+  --color-neutral-400: #6b6155;
+  --color-neutral-500: #837868;
+  --color-neutral-600: #9d9284;
+  --color-neutral-700: #cec3b0;
+  --color-neutral-800: #e6dccb;
+  --color-neutral-900: #f2eade;
+
+  --shadow-sm: 0 0 0 1px var(--color-neutral-800);
+  --shadow-md: 0 0 0 1px var(--color-neutral-800), 0 8px 22px rgba(74, 52, 24, 0.10);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-700), 0 20px 46px rgba(74, 52, 24, 0.16);
+}
+
+/* ── glass ─────────────────────────────────────────────────────────────────
+   The Apple reading of the same app: a cool graphite ground with no warmth in
+   it at all, because everything above it is going to be translucent and warmth
+   in the ground turns a frosted pane muddy. Corners are the platform's, and the
+   type is the platform's too — asking for `-apple-system` on a Mac gets real
+   San Francisco, which is the single loudest signal that a window belongs to
+   this desktop. The frost itself is tuned in app.css, beside the tokens it
+   overrides. */
+:root[data-theme-family='glass'] {
+  --radius-sm: 7px;
+  --radius-md: 11px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+
+  --font-heading: -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
+  --font-body: -apple-system, 'SF Pro Text', BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
+}
+:root:where([data-theme-family='glass']) {
+  --color-bg: #0e0f13;
+  --color-surface: #191b21;
+  --color-text: #eef0f6;
+  --color-divider: color-mix(in srgb, var(--color-text) 17%, transparent);
+
+  --color-neutral-100: #f6f7fb;
+  --color-neutral-200: #e6e8f0;
+  --color-neutral-300: #ced2de;
+  --color-neutral-400: #adb2c2;
+  --color-neutral-500: #8c92a4;
+  --color-neutral-600: #6f7587;
+  --color-neutral-700: #545a6a;
+  --color-neutral-800: #383d4a;
+  --color-neutral-900: #23262f;
+
+  --shadow-sm: 0 0 0 1px var(--color-neutral-800);
+  --shadow-md: 0 0 0 1px var(--color-neutral-800), 0 10px 30px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-700), 0 24px 60px rgba(0, 0, 0, 0.7);
+}
+:root[data-theme='light']:where([data-theme-family='glass']) {
+  --color-bg: #eceef4;
+  --color-surface: #ffffff;
+  --color-text: #14161c;
+  --color-divider: color-mix(in srgb, var(--color-text) 12%, transparent);
+
+  --color-neutral-100: #23262f;
+  --color-neutral-200: #383d4a;
+  --color-neutral-300: #545a6a;
+  --color-neutral-400: #5b6172;
+  --color-neutral-500: #6f7587;
+  --color-neutral-600: #8c92a4;
+  --color-neutral-700: #c2c7d4;
+  --color-neutral-800: #dee1ea;
+  --color-neutral-900: #eef0f5;
+
+  --shadow-sm: 0 0 0 1px var(--color-neutral-800);
+  --shadow-md: 0 0 0 1px var(--color-neutral-800), 0 10px 30px rgba(16, 20, 34, 0.10);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-700), 0 24px 60px rgba(16, 20, 34, 0.18);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -224,8 +393,8 @@ body[data-density='comfortable'] {
     --color-neutral-700: #9aa0b3;
 
     --shadow-sm: 0 0 0 1px var(--color-neutral-700);
-    --shadow-md: 0 0 0 1px var(--color-neutral-600), 0 6px 18px rgba(24, 26, 40, 0.18);
-    --shadow-lg: 0 0 0 1px var(--color-neutral-500), 0 16px 40px rgba(24, 26, 40, 0.24);
+    --shadow-md: 0 0 0 1px var(--color-neutral-600), 0 6px 18px rgba(34, 32, 24, 0.18);
+    --shadow-lg: 0 0 0 1px var(--color-neutral-500), 0 16px 40px rgba(34, 32, 24, 0.24);
 
     --accent-wash: color-mix(in srgb, var(--color-accent) 24%, transparent);
     --accent-wash-soft: color-mix(in srgb, var(--color-accent) 16%, transparent);
@@ -272,8 +441,8 @@ body[data-density='comfortable'] {
   --color-neutral-700: #8891a6;
 
   --shadow-sm: 0 0 0 1px var(--color-neutral-600);
-  --shadow-md: 0 0 0 1px var(--color-neutral-500), 0 6px 18px rgba(24, 26, 40, 0.22);
-  --shadow-lg: 0 0 0 1px var(--color-neutral-400), 0 16px 40px rgba(24, 26, 40, 0.3);
+  --shadow-md: 0 0 0 1px var(--color-neutral-500), 0 6px 18px rgba(34, 32, 24, 0.22);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-400), 0 16px 40px rgba(34, 32, 24, 0.3);
 
   --accent-wash: color-mix(in srgb, var(--color-accent) 26%, transparent);
   --accent-wash-soft: color-mix(in srgb, var(--color-accent) 18%, transparent);

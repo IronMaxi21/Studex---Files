@@ -20,13 +20,44 @@ test('Settings → AI shows the key field and the models when no key is set', as
   expect(errors).toEqual([]);
 });
 
+/**
+ * The same screen in the app people download: the key is the build's own, so
+ * the field, the model roster and the call log are not there at all — not
+ * greyed out, not empty. The status endpoint is answered as a release build's
+ * would answer it; the routes behind the two hidden sections refuse as well.
+ */
+test('Settings → AI hides the key and the developer screens in a release build', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+
+  await page.route('**/api/ai/status', (route) => route.fulfill({
+    json: {
+      available: true, usage: { used: 3, limit: 1000, remaining: 997 },
+      keySet: true, keySource: 'builtin', keyHint: null,
+      keyEditable: false, keyRemovable: false, developer: false,
+      models: null, roles: null, weights: { spec_import: 5 },
+    },
+  }));
+
+  await page.goto('/#/settings/ai');
+  await expect(page.getByRole('heading', { name: 'AI' })).toBeVisible();
+  await expect(page.getByText('Included with Studex.')).toBeVisible();
+  await expect(page.getByLabel('Gemini API key')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Save key' })).toHaveCount(0);
+  await expect(page.locator('.ai-models .role')).toHaveCount(0);
+  await expect(page.getByText('RECENT CALLS')).toHaveCount(0);
+  await expect(page.getByText('997 left', { exact: false })).toBeVisible();
+
+  expect(errors).toEqual([]);
+});
+
 test('Ask AI opens from the top bar on any page and shows the answer', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
 
   // The model is not called: status and chat are answered here.
   await page.route('**/api/ai/status', (route) => route.fulfill({
-    json: { available: true, usage: { used: 1, limit: 1000, remaining: 999 }, keySet: true, keySource: 'settings', keyHint: '…abcd', keyEditable: true, models: null, roles: {}, weights: {} },
+    json: { available: true, usage: { used: 1, limit: 1000, remaining: 999 }, keySet: true, keySource: 'settings', keyHint: '…abcd', keyEditable: true, keyRemovable: true, developer: true, models: null, roles: {}, weights: {} },
   }));
   let sent: { messages: Array<{ role: string; content: string }>; context: unknown } | null = null;
   await page.route('**/api/ai/chat', async (route) => {

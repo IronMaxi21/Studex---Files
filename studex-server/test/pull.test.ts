@@ -18,6 +18,7 @@ import { createFile, createFolder, trashFile, updateFile } from '../src/domain/l
 import { saveDocument, getDocument } from '../src/domain/documents.js';
 import { pushLibrary } from '../src/domain/sync.js';
 import { pullLibrary } from '../src/domain/pull.js';
+import { listRevisions, restoreRevision } from '../src/domain/revisions.js';
 import { fakeRemote } from './fake-remote.js';
 
 async function linkedUser() {
@@ -203,7 +204,7 @@ describe('pulling a library from Supabase', () => {
     assert.equal(blocks[0]!.text, 'Second draft.');
   });
 
-  it('keeps both versions when both sides changed', async () => {
+  it('stays one file when both sides changed, keeping the replaced version behind it', async () => {
     const { userId, supabaseUserId } = await linkedUser();
     const note = createFile(userId, { title: 'Equilibria', kind: 'doc' });
     saveDocument(userId, note.id, para('Agreed text.'));
@@ -222,23 +223,32 @@ describe('pulling a library from Supabase', () => {
     assert.equal(result.conflicted, 1);
     assert.equal(result.updated, 0);
 
-    // Nothing is thrown away: this device keeps its own text, and the other
-    // one's arrives beside it.
-    assert.deepEqual(fileTitles(userId), ['Equilibria', 'Equilibria (from another device)']);
+    // One note, not two: the library never grows a second copy of something
+    // the person thinks of as one file.
+    assert.deepEqual(fileTitles(userId), ['Equilibria']);
 
-    const mine = getDocument(userId, note.id).blocks as Array<{ text?: string }>;
-    assert.equal(mine[0]!.text, 'What I wrote here.');
+    const now = getDocument(userId, note.id).blocks as Array<{ text?: string }>;
+    assert.equal(now[0]!.text, 'What I wrote there.', 'the synced version is what the file holds');
 
-    const theirs = fileByTitle(userId, 'Equilibria (from another device)')!;
-    const theirBlocks = getDocument(userId, theirs.id).blocks as Array<{ text?: string }>;
-    assert.equal(theirBlocks[0]!.text, 'What I wrote there.');
+    // And the text this Mac had is kept, and can be put back.
+    const kept = listRevisions(userId, note.id);
+    assert.equal(kept.length, 1);
+    assert.equal(kept[0]!.reason, 'sync');
 
-    // And the next push settles it: this device's version wins the original
-    // item, and the copy travels up as something new.
+    await restoreRevision(userId, note.id, kept[0]!.id);
+    const restored = getDocument(userId, note.id).blocks as Array<{ text?: string }>;
+    assert.equal(restored[0]!.text, 'What I wrote here.');
+    assert.equal(
+      listRevisions(userId, note.id).length,
+      2,
+      'the restore is itself undoable',
+    );
+
+    // And the next push settles it: one item upstream, matching this device.
     const pushed = await pushLibrary(userId, supabaseUserId, fake.store);
     assert.equal(pushed.removed, 0, 'nothing was deleted upstream by resolving a conflict');
     const upstream = [...fake.items.values()].filter((i) => i.kind === 'doc').map((i) => i.name).sort();
-    assert.deepEqual(upstream, ['Equilibria', 'Equilibria (from another device)']);
+    assert.deepEqual(upstream, ['Equilibria']);
   });
 
   it('adopts a library it already holds instead of duplicating it', async () => {

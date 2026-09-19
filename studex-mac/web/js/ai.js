@@ -130,6 +130,46 @@ export async function explainPassage({ fileId = null, annotationId = null, text 
   return shown;
 }
 
+/**
+ * "Why is that the answer?", for a card that has just been turned over.
+ *
+ * Deliberately not a dialog. The point is to read it beside the card and carry
+ * on; a window over a study sitting breaks the rhythm the sitting exists for.
+ * The node comes back empty and fills itself in, so the caller can put it on
+ * screen in the same frame the button was pressed rather than leaving a button
+ * that appears to do nothing for four seconds.
+ */
+export function explainCard({ front, back, given = '' }) {
+  const box = el('div', { class: 'ai-explain' },
+    el('div', { class: 'ai-thinking' }, icon('sparkle', { size: 13 }), 'Thinking about this card…'));
+
+  // The card goes over as the passage, so the server's own rules about
+  // explaining a fragment apply unchanged; the question is what turns
+  // "explain this text" into "explain why this is the answer".
+  const passage = [
+    `Question: ${front}`,
+    `Answer: ${back}`,
+    given ? `The student wrote: ${given}` : null,
+  ].filter(Boolean).join('\n');
+
+  const question = given
+    ? 'This is a flashcard a student has just got wrong. Explain why the answer is what it is, and what their own answer got wrong.'
+    : 'This is a flashcard. Explain why the answer is what it is — the reasoning behind it, not a restatement of it.';
+
+  void (async () => {
+    try {
+      const result = await api.aiExplain({ text: passage, question });
+      spent();
+      if (!box.isConnected) return;
+      mount(box, prose(result.answer), caveat('Written by a model. Check it against your notes.'));
+    } catch (err) {
+      if (box.isConnected) mount(box, failure(err));
+    }
+  })();
+
+  return box;
+}
+
 /* --------------------------- cards from material -------------------------- */
 
 /**

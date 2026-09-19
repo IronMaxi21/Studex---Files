@@ -124,6 +124,25 @@ export const canvasObjectSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     ...objectBase,
+    /**
+     * Something else in the library, standing on the plane.
+     *
+     * A canvas is where a topic gets laid out, and most of what a topic is
+     * made of already exists as a note, a deck or a PDF. Before this the only
+     * way to say "and that lecture PDF belongs here" was to type its name into
+     * a sticky note, which is a label, not a way back to it.
+     *
+     * The title is stored alongside the id so a card whose file has been
+     * deleted still says what it was, rather than becoming an empty box.
+     */
+    type: z.literal('link'),
+    width: coordinate,
+    height: coordinate,
+    fileId: uuid,
+    title: text(200).nullish(),
+  }),
+  z.object({
+    ...objectBase,
     type: z.literal('connector'),
     fromId: uuid,
     toId: uuid,

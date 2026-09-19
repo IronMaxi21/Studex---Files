@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as lib from '../domain/library.js';
+import * as preview from '../domain/preview.js';
+import * as revisions from '../domain/revisions.js';
 import { backgroundSchema } from '../domain/canvas.js';
 import { documentStyleSchema } from '../domain/documents.js';
 import { requireAuth } from '../lib/http.js';
@@ -9,6 +11,8 @@ import { colorToken, nameOrUntitled, pagination, parse, text, uuid } from '../li
 const fileKind = z.enum(['canvas', 'doc', 'pdf', 'deck']);
 
 const idParam = z.object({ id: uuid });
+
+const revisionParams = z.object({ id: uuid, revisionId: uuid });
 
 const createFolderBody = z.object({
   name: nameOrUntitled(120),
@@ -139,6 +143,29 @@ export async function libraryRoutes(app: FastifyInstance): Promise<void> {
     const { id } = parse(idParam, req.params);
     const file = lib.requireFile(user.id, id);
     return { file: { ...file, pinned: file.pinned === 1, effective_color: lib.effectiveFileColor(user.id, file) } };
+  });
+
+  /** Everything a glance at a file shows, without opening it. */
+  app.get('/files/:id/preview', async (req) => {
+    const { user } = requireAuth(req);
+    const { id } = parse(idParam, req.params);
+    return preview.filePreview(user.id, id);
+  });
+
+  /**
+   * The states this file was in before sync or a restore replaced them. A file
+   * is one file on every device, so this is where the version that lost sits.
+   */
+  app.get('/files/:id/revisions', async (req) => {
+    const { user } = requireAuth(req);
+    const { id } = parse(idParam, req.params);
+    return { revisions: revisions.listRevisions(user.id, id) };
+  });
+
+  app.post('/files/:id/revisions/:revisionId/restore', async (req) => {
+    const { user } = requireAuth(req);
+    const { id, revisionId } = parse(revisionParams, req.params);
+    return { revisions: await revisions.restoreRevision(user.id, id, revisionId) };
   });
 
   app.patch('/files/:id', async (req) => {

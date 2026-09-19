@@ -8,6 +8,7 @@ import { openMenu } from '../menu.js';
 import { promptText, confirmDelete, promptColor } from '../dialog.js';
 import { relative, plural, FILE_ICON, FILE_LABEL } from '../format.js';
 import { openShareSheet } from '../share.js';
+import { openVersionSheet } from '../versions.js';
 import { isNative, openWindow } from '../native.js';
 
 const SORTS = [
@@ -485,6 +486,12 @@ export function fileMenuItems(file, refresh) {
     {
       icon: 'hash', label: 'Tags…',
       onSelect: () => void openTagSheet({ itemType: 'file', itemId: file.id, title: file.title }, refresh),
+    },
+    // What this file was before another device's version of it arrived. The
+    // file itself stays one file; this is where the version it replaced sits.
+    {
+      icon: 'clock-counter-clockwise', label: 'Earlier versions…',
+      onSelect: () => void openVersionSheet(file, refresh),
     },
     { sep: true },
     // Only in the app: a browser tab cannot be asked for a second window with
