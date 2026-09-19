@@ -16,7 +16,7 @@ revision timetable — one native Mac app, working offline, on your own disk.
 
 <a href="https://github.com/IronMaxi21/Studex-releases/releases/download/v1.2.0/Studex-1.2.0.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/e3179be1-8416-4b8a-b417-743e1ecc67d6" alt="Download for macOS" /></a>
 
-Once downloaded, open the `.dmg` and move **Boring Notch** to your `/Applications` folder.
+Once downloaded, open the `.dmg` and move **Studex** to your `/Applications` folder.
 
 > [!IMPORTANT]
 > We don't have an Apple Developer account (yet 👀), so macOS will warn you that Studex is from an unidentified developer on first launch. This is expected behavior.
