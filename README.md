@@ -9,12 +9,12 @@
 Notes, an infinite canvas, flashcards, your exam board's specification and the
 revision timetable — one native Mac app, working offline, on your own disk.
 
-[![Latest release](https://img.shields.io/badge/release-v4.0-5a4fcf)](https://github.com/IronMaxi21/Studex-releases/releases/latest)
+[![Latest release](https://img.shields.io/badge/release-v4.0.1-5a4fcf)](https://github.com/IronMaxi21/Studex-releases/releases/latest)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%20Ventura%20or%20later-1c1a4a)](#requirements)
 [![Apple silicon](https://img.shields.io/badge/Apple%20silicon-arm64-444)](#requirements)
 [![Free to start](https://img.shields.io/badge/free-no%20card%20required-2e7d5b)](#free-vs-pro)
 
-<a href="https://github.com/IronMaxi21/Studex-releases/releases/download/v4.0/Studex-4.0.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/e3179be1-8416-4b8a-b417-743e1ecc67d6" alt="Download for macOS" /></a>
+<a href="https://github.com/IronMaxi21/Studex-releases/releases/download/v4.0.1/Studex-4.0.1.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/e3179be1-8416-4b8a-b417-743e1ecc67d6" alt="Download for macOS" /></a>
 
 Once downloaded, open the `.dmg` and move **Studex** to your `/Applications` folder.
 
@@ -29,7 +29,7 @@ Once downloaded, open the `.dmg` and move **Studex** to your `/Applications` fol
 
 This is the quickest and easiest method. It only requires a single command and works consistently for all users. System Settings can sometimes fail and won't work for non-admin users.
 
-After moving Boring Notch to your Applications folder, run:
+After moving Studex to your Applications folder, run:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/studex.app
@@ -47,11 +47,10 @@ Then open the app normally.
 1. Try to open the app — you'll see a security warning.
 2. Click **OK** to dismiss it.
 3. Open **System Settings** > **Privacy & Security**.
-4. Scroll to the bottom and click **Open Anyway** next to the Boring Notch warning.
+4. Scroll to the bottom and click **Open Anyway** next to the Studex warning.
 5. Confirm if prompted.
 
 ---
-
 
 ---
 
@@ -161,7 +160,7 @@ Behind** reading for each exam.
 ## Requirements
 
 | | |
-|---|---|
+| --- | --- |
 | Operating system | macOS 13 Ventura or later |
 | Processor | Apple silicon (M1 or later) |
 | Network | Optional — the app is fully usable offline |
@@ -174,7 +173,7 @@ Behind** reading for each exam.
 Free is not a trial. It doesn't expire, and it doesn't ask for a card.
 
 | | Free | Pro — £4.50/mo |
-|---|---|---|
+| --- | --- | --- |
 | Documents and notes | Unlimited | Unlimited |
 | Flashcards and decks | Unlimited | Unlimited |
 | Canvases | 3 | Unlimited |
@@ -197,7 +196,7 @@ under them.
 ## Shortcuts worth learning first
 
 | | |
-|---|---|
+| --- | --- |
 | <kbd>⌘</kbd><kbd>1</kbd> | New canvas |
 | <kbd>⌘</kbd><kbd>2</kbd> | New document |
 | <kbd>⌘</kbd><kbd>3</kbd> | New deck |

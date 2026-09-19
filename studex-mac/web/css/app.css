@@ -1328,6 +1328,9 @@ h2.section { margin: 0; font: 500 22px/1.15 var(--font-heading); letter-spacing:
 .block.table-wrap, .block.card-wrap, .block.code-wrap, .block.math-wrap, .block.divider { margin: 18px 0; }
 /* The first line of a document already has a title above it. */
 .doc-page > .block:first-of-type { margin-top: 0; }
+/* Room to click under the last line. Short enough that a full page does not
+   grow a second screen of nothing, tall enough to be an easy target. */
+.doc-tail { min-height: 96px; cursor: text; }
 /* The margin control, on every line.
    Out of the flow entirely, so a rule and a heading keep the spacing they were
    designed with — and unclickable until it is visible, because an invisible

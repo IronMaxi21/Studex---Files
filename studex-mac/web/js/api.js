@@ -99,6 +99,61 @@ const DEFAULT_TIMEOUT_MS = 20_000;
 const AI_TIMEOUT_MS = 120_000;
 const SYNC_TIMEOUT_MS = 120_000;
 
+/**
+ * Whether this page is running inside the Mac app.
+ *
+ * The desktop shell serves this interface from the app bundle under a scheme
+ * of its own and forwards the API calls itself, which costs two browser
+ * conveniences. The page has no cookie jar — the shell holds the session and
+ * attaches the CSRF token, which is strictly better, since nothing running in
+ * the page can reach either. And a request body the browser assembled, a
+ * FormData or a Blob, does not survive the handoff to native code. Uploads are
+ * therefore encoded here, by hand, into bytes that do.
+ */
+const inShell = () => typeof window !== 'undefined' && !!window.__studexShell;
+
+/**
+ * A name inside a multipart header, without the characters that could end the
+ * header early. Browsers percent-encode exactly these, and the server reads
+ * the encoded spelling back as the same name.
+ */
+const headerSafe = (value) => String(value).replace(/"/g, '%22').replace(/[\r\n]/g, '');
+
+/**
+ * Encodes a FormData the way a browser would, into one array of bytes.
+ *
+ * `onProgress` is called per field, because reading a large file into memory
+ * is the part of a desktop upload that takes any time at all.
+ */
+async function encodeMultipart(form, onProgress) {
+  const boundary = `----studex${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  const encoder = new TextEncoder();
+  const entries = [...form.entries()];
+  const parts = [];
+  let done = 0;
+
+  for (const [name, value] of entries) {
+    const isFile = typeof Blob !== 'undefined' && value instanceof Blob;
+    let head = `--${boundary}\r\nContent-Disposition: form-data; name="${headerSafe(name)}"`;
+    if (isFile) head += `; filename="${headerSafe(value.name || 'file')}"`;
+    head += '\r\n';
+    if (isFile) head += `Content-Type: ${value.type || 'application/octet-stream'}\r\n`;
+    parts.push(encoder.encode(`${head}\r\n`));
+    parts.push(isFile ? new Uint8Array(await value.arrayBuffer()) : encoder.encode(String(value)));
+    parts.push(encoder.encode('\r\n'));
+    done += 1;
+    onProgress?.(done / (entries.length + 1));
+  }
+  parts.push(encoder.encode(`--${boundary}--\r\n`));
+
+  let size = 0;
+  for (const part of parts) size += part.length;
+  const body = new Uint8Array(size);
+  let at = 0;
+  for (const part of parts) { body.set(part, at); at += part.length; }
+  return { contentType: `multipart/form-data; boundary=${boundary}`, body };
+}
+
 const idempotent = (method) => method === 'GET' || method === 'HEAD';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -139,7 +194,13 @@ async function attemptRequest(method, path, { body, query, raw, timeout = DEFAUL
 
   if (body !== undefined) {
     if (body instanceof FormData) {
-      init.body = body; // let the browser set the multipart boundary
+      if (inShell()) {
+        const part = await encodeMultipart(body);
+        headers['content-type'] = part.contentType;
+        init.body = part.body;
+      } else {
+        init.body = body; // let the browser set the multipart boundary
+      }
     } else {
       headers['content-type'] = 'application/json';
       init.body = JSON.stringify(body);
@@ -234,6 +295,7 @@ async function attemptRequest(method, path, { body, query, raw, timeout = DEFAUL
  * its time to process a received file is not mistaken for a broken link.
  */
 export function upload(path, formData, { onProgress } = {}) {
+  if (inShell()) return uploadInShell(path, formData, onProgress);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', path, true);
@@ -287,6 +349,60 @@ export function upload(path, formData, { onProgress } = {}) {
     kick();
     xhr.send(formData);
   });
+}
+
+/**
+ * The same upload, for the desktop shell.
+ *
+ * XMLHttpRequest cannot carry a body to the shell's scheme handler at all, so
+ * the multipart is encoded and sent with fetch. That costs the progress
+ * events — fetch will not narrate a request body — so what is reported is the
+ * encoding, which for a large file is where the wait actually is. What follows
+ * it is a copy to a server on this machine, and there is no such thing as a
+ * slow connection to it.
+ *
+ * Never retried, for the same reason the browser path is not: a repeated POST
+ * of a fifty-megabyte PDF is a second copy of it in the library.
+ */
+async function uploadInShell(path, formData, onProgress) {
+  let part;
+  try {
+    part = await encodeMultipart(formData, (fraction) => onProgress?.(fraction * 0.9));
+  } catch (cause) {
+    throw new ApiError(0, 'unreadable', 'The file could not be read.', { cause: String(cause) });
+  }
+  onProgress?.(0.9);
+
+  let res;
+  try {
+    res = await fetch(path, {
+      method: 'POST',
+      headers: { 'content-type': part.contentType },
+      credentials: 'same-origin',
+      body: part.body,
+    });
+  } catch (cause) {
+    setReachable(false);
+    throw new ApiError(0, 'network_error', 'Cannot reach the Studex server.', { cause: String(cause) });
+  }
+  setReachable(true);
+  onProgress?.(1);
+
+  let payload = null;
+  try {
+    const text = await res.text();
+    if (text) payload = JSON.parse(text);
+  } catch { /* not JSON */ }
+
+  if (res.status === 401) notifyUnauthorized(payload?.error?.code);
+  if (res.ok) return payload;
+  const err = payload?.error;
+  throw new ApiError(
+    res.status,
+    err?.code ?? 'error',
+    err?.message ?? `Request failed (${res.status})`,
+    err?.details,
+  );
 }
 
 async function toError(res) {

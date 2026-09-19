@@ -22,11 +22,17 @@ import { lockSettings, authenticate } from './native.js';
  * the sheet below says so rather than implying an internet URL.
  */
 export function shareUrl(token) {
+  // In the desktop app the page itself is not served over http at all — it is
+  // read from the app bundle — so the address a link holder needs is the one
+  // the shell says its backend is listening on.
+  const backend = window.__studexShell?.backend;
+  if (backend) return `${backend}/#/s/${token}`;
   return `${location.origin}${location.pathname}#/s/${token}`;
 }
 
 /** True when the app is its own server on this machine, i.e. the desktop app. */
 function isLoopback() {
+  if (window.__studexShell) return true;
   return /^(127\.|localhost$|\[?::1\]?$)/.test(location.hostname);
 }
 

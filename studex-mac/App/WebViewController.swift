@@ -60,7 +60,10 @@ final class StudexWebView: WKWebView {
 }
 
 final class WebViewController: NSViewController {
-    private let baseURL: URL
+    /// The interface's address, which no longer moves: it is served from the
+    /// bundle by `InterfaceScheme` rather than from whichever port the backend
+    /// came up on. See that file for why.
+    private let baseURL = InterfaceScheme.page
 
     /// The theme the app last resolved, painted behind the page until the page
     /// itself says otherwise.
@@ -92,6 +95,11 @@ final class WebViewController: NSViewController {
 
     /// The script that restores the page's saved `studex.` keys and mirrors
     /// later writes to them back to the shell.
+    ///
+    /// The page's origin is stable now, so local storage would survive on its
+    /// own. This stays because it is what carries settings across the move off
+    /// http — and because it is the only copy that survives a reset of the web
+    /// view's data.
     private static func pageStorageScript() -> String {
         let saved = UserDefaults.standard.dictionary(forKey: pageStorageKey) as? [String: String] ?? [:]
         let data = (try? JSONSerialization.data(withJSONObject: saved)) ?? Data("{}".utf8)
@@ -119,6 +127,30 @@ final class WebViewController: NSViewController {
           };
         })();
         """
+    }
+
+    /// What the page is told about the shell it is running in.
+    ///
+    /// `backend` is the address a share link has to carry. The page is served
+    /// from the bundle and has no idea where the backend is listening, and a
+    /// link made there reaches that address on this machine and nowhere else —
+    /// which the sharing sheet says plainly rather than implying otherwise.
+    private static func shellScript() -> String {
+        let backend = InterfaceScheme.shared.address?.absoluteString ?? ""
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        return """
+        window.__studexShell = { backend: \(literal(backend)), version: \(literal(version)) };
+        window.__studexBackend = function (address) {
+          if (window.__studexShell) window.__studexShell.backend = String(address || '');
+        };
+        """
+    }
+
+    /// One value, safe to paste into a script.
+    private static func literal(_ value: String) -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: [value])) ?? Data("[]".utf8)
+        let array = String(data: data, encoding: .utf8) ?? "[]"
+        return String(array.dropFirst().dropLast())
     }
 
     /// Keeps (or, for a nil value, forgets) one page preference.
@@ -150,8 +182,10 @@ final class WebViewController: NSViewController {
     /// it to its own page.
     private var updateObserver: NSObjectProtocol?
 
-    init(baseURL: URL, theme: String) {
-        self.baseURL = baseURL
+    /// Kept so the page can be told where the backend moved to.
+    private var addressObserver: NSObjectProtocol?
+
+    init(theme: String) {
         self.theme = theme
         super.init(nibName: nil, bundle: nil)
     }
@@ -165,13 +199,20 @@ final class WebViewController: NSViewController {
         webView?.configuration.userContentController
             .removeScriptMessageHandler(forName: Self.bridgeName)
         if let updateObserver { NotificationCenter.default.removeObserver(updateObserver) }
+        if let addressObserver { NotificationCenter.default.removeObserver(addressObserver) }
     }
 
     override func loadView() {
         let configuration = WKWebViewConfiguration()
 
+        // The interface is served from the bundle, and the requests it makes
+        // to the backend are forwarded in Swift. Nothing inside this web view
+        // is ever http, which is what keeps the app an app rather than a site.
+        configuration.setURLSchemeHandler(InterfaceScheme.shared, forURLScheme: InterfaceScheme.scheme)
+
         // The default store is persistent and scoped to this bundle
-        // identifier, which is what keeps the session cookie across launches.
+        // identifier. The page's origin is now a constant, so what it keeps
+        // there — local storage above all — survives a restart.
         configuration.websiteDataStore = .default()
         // Through a weak proxy: the content controller retains its handlers, and
         // it is itself owned by this controller's web view, so handing it
@@ -181,7 +222,8 @@ final class WebViewController: NSViewController {
         configuration.userContentController.add(WeakScriptHandler(self), name: Self.bridgeName)
 
         // First-launch onboarding is remembered here rather than in the page's
-        // storage, which is lost with the port each launch. See onboarding.js.
+        // storage, so that clearing the page's data cannot un-onboard someone
+        // halfway through their first session. See onboarding.js.
         let onboarded = UserDefaults.standard.bool(forKey: Self.onboardedKey)
         configuration.userContentController.addUserScript(WKUserScript(
             source: "window.__studexOnboarded = \(onboarded);",
@@ -190,13 +232,21 @@ final class WebViewController: NSViewController {
         ))
 
         // The page keeps its per-device preferences (density, extra accents,
-        // palettes, shortcuts, the device id itself) in localStorage, which is
-        // scoped to the origin — and the origin's port changes every launch, so
-        // on its own every one of them was forgotten on relaunch. The shell
+        // palettes, shortcuts, the device id itself) in localStorage. The shell
         // keeps a copy: it is put back before any page script runs, and every
         // write to a `studex.` key is mirrored over the bridge.
         configuration.userContentController.addUserScript(WKUserScript(
             source: Self.pageStorageScript(),
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+
+        // Two things the page cannot work out for itself now that it is not
+        // served over http: that it is inside the shell at all, and where the
+        // backend is listening — which is still the address a share link has
+        // to point at, because a link made here works on this machine only.
+        configuration.userContentController.addUserScript(WKUserScript(
+            source: Self.shellScript(),
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         ))
@@ -248,6 +298,7 @@ final class WebViewController: NSViewController {
             webView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
         view = container
+        observeBackendAddress()
     }
 
     // MARK: - The lock
@@ -433,6 +484,22 @@ final class WebViewController: NSViewController {
     /// with a spinner: this replaces the application, and a user watching it
     /// happen is owed the detail. A failure leaves everything as it was — the
     /// swap is the last thing that happens and it is atomic.
+    /// Tells the page where the backend is whenever it moves, which it does
+    /// on every restart. Nothing the page renders depends on this except the
+    /// address it puts in a share link, so a page that was loaded during a
+    /// restart becomes correct on its own rather than needing a reload.
+    private func observeBackendAddress() {
+        guard addressObserver == nil else { return }
+        addressObserver = NotificationCenter.default.addObserver(
+            forName: InterfaceScheme.addressChanged, object: nil, queue: .main
+        ) { [weak self] note in
+            let address = (note.object as? URL)?.absoluteString ?? ""
+            self?.webView.evaluateJavaScript(
+                "window.__studexBackend && window.__studexBackend(\(Self.literal(address)))"
+            )
+        }
+    }
+
     private func observeUpdates() {
         guard updateObserver == nil else { return }
         updateObserver = NotificationCenter.default.addObserver(
@@ -482,9 +549,8 @@ final class WebViewController: NSViewController {
     /// would share cookies and CSP with the real UI.
     private func isAppURL(_ url: URL) -> Bool {
         if url.scheme == "about" || url.scheme == "blob" { return true }
-        guard let scheme = url.scheme, scheme == "http",
-              let host = url.host, let port = url.port else { return false }
-        return host == baseURL.host && port == baseURL.port
+        guard url.scheme == InterfaceScheme.scheme else { return false }
+        return url.host == baseURL.host
     }
 }
 
@@ -497,13 +563,14 @@ extension WebViewController: WKNavigationDelegate {
         preferences: WKWebpagePreferences,
         decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
     ) {
-        // An anchor carrying `download` — the annotations export.
-        if navigationAction.shouldPerformDownload {
-            decisionHandler(.download, preferences)
-            return
-        }
         guard let url = navigationAction.request.url else {
             decisionHandler(.cancel, preferences)
+            return
+        }
+        // An anchor carrying `download` — an export, a deck pack, a backup.
+        if navigationAction.shouldPerformDownload, isAppURL(url) {
+            decisionHandler(.cancel, preferences)
+            save(from: url)
             return
         }
         if isAppURL(url) {
@@ -523,15 +590,12 @@ extension WebViewController: WKNavigationDelegate {
     ) {
         // A PDF renders in the viewer; anything WebKit cannot display is a file
         // the user asked for, so it is saved rather than silently discarded.
-        decisionHandler(navigationResponse.canShowMIMEType ? .allow : .download)
-    }
-
-    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
-        download.delegate = self
-    }
-
-    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
-        download.delegate = self
+        if navigationResponse.canShowMIMEType {
+            decisionHandler(.allow)
+            return
+        }
+        decisionHandler(.cancel)
+        if let url = navigationResponse.response.url, isAppURL(url) { save(from: url) }
     }
 
     /// A load that worked clears the retry count: the next failure is a new
@@ -656,35 +720,50 @@ extension WebViewController: WKUIDelegate {
 
 // MARK: - Downloads
 
-extension WebViewController: WKDownloadDelegate {
-    func download(
-        _ download: WKDownload,
-        decideDestinationUsing response: URLResponse,
-        suggestedFilename: String,
-        completionHandler: @escaping (URL?) -> Void
-    ) {
-        guard let window = view.window else { completionHandler(nil); return }
-
-        let panel = NSSavePanel()
-        // Only the last path component is used: a server-supplied filename is
-        // untrusted input and must not be able to steer where the file lands.
-        panel.nameFieldStringValue = (suggestedFilename as NSString).lastPathComponent
-        panel.canCreateDirectories = true
-        panel.beginSheetModal(for: window) { result in
-            guard result == .OK, let url = panel.url else { completionHandler(nil); return }
-            // The panel has already asked about replacing, but WKDownload
-            // refuses a destination that exists, so honour the answer here.
-            try? FileManager.default.removeItem(at: url)
-            completionHandler(url)
+extension WebViewController {
+    /// Saves a file the page asked for.
+    ///
+    /// The interface's exports are ordinary links with `download` on them. On
+    /// an http page WebKit fetched and saved one itself; it will not do that
+    /// for a custom scheme, so the navigation is cancelled and the shell
+    /// fetches the file over the same session it forwards the page's requests
+    /// on. The panel below is the one that was always here.
+    private func save(from url: URL) {
+        guard let window = view.window else { return }
+        let path = url.path + (url.query.map { "?" + $0 } ?? "")
+        InterfaceScheme.shared.download(path: path) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case let .success((file, suggested)):
+                let panel = NSSavePanel()
+                // Only the last path component is used: a server-supplied
+                // filename is untrusted input and must not be able to steer
+                // where the file lands.
+                let name = suggested ?? url.lastPathComponent
+                panel.nameFieldStringValue = (name as NSString).lastPathComponent
+                panel.canCreateDirectories = true
+                panel.beginSheetModal(for: window) { answer in
+                    guard answer == .OK, let destination = panel.url else {
+                        try? FileManager.default.removeItem(at: file)
+                        return
+                    }
+                    do {
+                        // The panel has already asked about replacing.
+                        try? FileManager.default.removeItem(at: destination)
+                        try FileManager.default.moveItem(at: file, to: destination)
+                        NSWorkspace.shared.activateFileViewerSelecting([destination])
+                    } catch {
+                        try? FileManager.default.removeItem(at: file)
+                        self.reportSaveFailure(error)
+                    }
+                }
+            case let .failure(error):
+                self.reportSaveFailure(error)
+            }
         }
     }
 
-    func downloadDidFinish(_ download: WKDownload) {
-        guard let url = download.progress.fileURL else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([url])
-    }
-
-    func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+    private func reportSaveFailure(_ error: Error) {
         guard let window = view.window else { return }
         let alert = NSAlert()
         alert.messageText = "The download did not finish."
@@ -711,8 +790,8 @@ extension WebViewController: WKScriptMessageHandler {
         // Only messages from the app's own origin are acted on; a frame
         // showing a PDF must not be able to drive the window.
         guard message.frameInfo.isMainFrame,
+              message.frameInfo.securityOrigin.protocol == InterfaceScheme.scheme,
               message.frameInfo.securityOrigin.host == baseURL.host,
-              message.frameInfo.securityOrigin.port == baseURL.port ?? 0,
               let body = message.body as? [String: Any],
               let name = body["name"] as? String
         else { return }

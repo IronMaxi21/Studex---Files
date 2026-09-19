@@ -90,9 +90,12 @@ final class StudexWindow: NSObject, NSWindowDelegate {
 
     // MARK: - Contents
 
+    /// Whether this window is showing the interface rather than a launch view.
+    var isShowingInterface: Bool { controller != nil }
+
     /// Puts the page in, at the route this window was opened for.
-    func showInterface(at url: URL, zoom: CGFloat) {
-        let controller = WebViewController(baseURL: url, theme: theme)
+    func showInterface(zoom: CGFloat) {
+        let controller = WebViewController(theme: theme)
         controller.onThemeChange = { [weak self] theme in self?.onThemeChange?(theme) }
         controller.onNewWindow = { [weak self] route in self?.onNewWindow?(route) }
         controller.onRouteChange = { [weak self] route, title in self?.pageMoved(to: route, title: title) }

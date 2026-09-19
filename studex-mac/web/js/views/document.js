@@ -801,9 +801,33 @@ export async function documentView(route, host) {
         el('h2', { class: 'doc-title', text: file.title }),
       ),
       ...drawLines(),
+      tailSpace(),
     );
     drawDock();
     if (selected.size) paintSelection();
+  }
+
+  /**
+   * The room under the last line, which makes one when it is clicked.
+   *
+   * A page ending in a rule, a table or an image had nowhere left to type:
+   * those lines take no caret, so the only way to carry on writing was to add
+   * a line further up and move it down. Clicking the space below the page is
+   * what the hand does anyway, so that is what it now means.
+   */
+  function tailSpace() {
+    const prose = ['paragraph', 'heading', 'bullet', 'numbered', 'todo', 'quote'];
+    return el('div', {
+      class: 'doc-tail',
+      onmousedown: (event) => {
+        event.preventDefault();
+        const last = blocks[blocks.length - 1];
+        // An empty line already waiting at the foot is the line being asked
+        // for. Adding a second would only leave one to delete.
+        if (last && prose.includes(last.type) && !last.text) focusBlock(last.id, true);
+        else insertAfter(blocks.length - 1, { type: plainType() });
+      },
+    });
   }
 
   /**
@@ -872,6 +896,40 @@ export async function documentView(route, host) {
     queue();
     draw();
     focusBlock(block.id);
+  }
+
+  /**
+   * The keys a line keeps when Return belongs to what is being written.
+   *
+   * Code, an equation and a table cell all swallow Return — a newline is part
+   * of the text there, not the end of a line — which left the caret with no
+   * way out of the block from the keyboard, and no way to start a line after
+   * one sitting at the foot of the page. These are the three things every
+   * ordinary line answers to, so they answer here too: ⌘↩ steps out into a
+   * new line below, ⌥↑/↓ moves the block, and Backspace on an empty one
+   * takes it away. Returns whether it handled the key, so a field with keys
+   * of its own can take what is left.
+   */
+  function fieldKeys(block, index, { isEmpty } = {}) {
+    return (event) => {
+      if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        insertAfter(index, { type: plainType() });
+        return true;
+      }
+      if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+        event.preventDefault();
+        moveBlock(index, event.key === 'ArrowUp' ? -1 : 1);
+        setTimeout(() => focusBlock(block.id, true), 0);
+        return true;
+      }
+      if (event.key === 'Backspace' && !event.repeat && blocks.length > 1 && isEmpty?.()) {
+        event.preventDefault();
+        removeAt(index);
+        return true;
+      }
+      return false;
+    };
   }
 
   function removeAt(index) {
@@ -2565,6 +2623,30 @@ export async function documentView(route, host) {
       });
       node.textContent = value ?? '';
       node.addEventListener('input', () => onEdit(node.textContent));
+
+      const escapes = fieldKeys(block, index, { isEmpty: () => false });
+      node.addEventListener('keydown', (event) => {
+        if (escapes(event)) return;
+        // Tab and Return walk the table rather than growing a cell. A cell
+        // holds one value, and a second line inside one pushes its whole row
+        // down the page; ⇧↩ is still there for the rare cell that wants a
+        // break of its own.
+        const forward = event.key === 'Tab' ? !event.shiftKey
+          : event.key === 'Enter' && !event.shiftKey ? true
+          : null;
+        if (forward === null) return;
+        event.preventDefault();
+        const cells = [...(node.closest('.table-block')?.querySelectorAll('.tcell[contenteditable]') ?? [])];
+        const next = cells[cells.indexOf(node) + (forward ? 1 : -1)];
+        if (!next) return;
+        next.focus();
+        const range = document.createRange();
+        range.selectNodeContents(next);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      });
       return node;
     };
 
@@ -3238,7 +3320,9 @@ export async function documentView(route, host) {
       document.execCommand('delete');
     };
 
+    const escapes = fieldKeys(block, index, { isEmpty: () => code.textContent === '' });
     code.addEventListener('keydown', (e) => {
+      if (escapes(e)) return;
       if (e.key !== 'Tab' || e.metaKey || e.ctrlKey) return;
       e.preventDefault();
       if (e.shiftKey) outdent(); else indent();
@@ -3296,6 +3380,9 @@ export async function documentView(route, host) {
     const paint = () => renderMath(output, source.textContent, { display: true });
     paint();
 
+    source.addEventListener('keydown', fieldKeys(block, index, {
+      isEmpty: () => source.textContent === '' && !caption.textContent,
+    }));
     source.addEventListener('input', () => {
       replace(index, { ...blocks[index], latex: source.textContent.slice(0, 4000) });
       paint();

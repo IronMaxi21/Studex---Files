@@ -24,7 +24,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Where the backend is listening, once it is. Held because a window
     /// opened later has to be pointed at it too.
-    private var serverURL: URL?
+    /// Whether the backend has been up at least once, which is what the first
+    /// launch waits for. After that the interface stays on screen through a
+    /// restart, so this stays true.
+    private var interfaceReady = false
 
     /// The theme the window opens in, before the page has an opinion.
     ///
@@ -180,7 +183,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         windows.append(studex)
-        if let serverURL { studex.showInterface(at: serverURL, zoom: Self.rememberedZoom()) }
+        if interfaceReady { studex.showInterface(zoom: Self.rememberedZoom()) }
         studex.show()
         rememberRoutes()
         return studex
@@ -201,28 +204,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /**
      What the supervisor is doing, in window terms.
 
-     There is deliberately nothing here for a backend that stopped: it restarts
-     itself, and all this has to do is take the page out while there is nothing
-     behind it and put it back afterwards, on the same route. A restart that
-     nobody has to click is a restart nobody has to know about.
+     Almost nothing, now that the interface is served from the bundle rather
+     than from the backend. A restart no longer takes the page away: the page
+     was never loaded from the address that changed, its requests wait a few
+     seconds for the new one, and anything that outlasts that shows the same
+     offline bar a dropped request has always shown. The first launch is the
+     one case that still waits, because an interface with nothing behind it
+     has nothing to show.
      */
     private func backendStatusChanged(_ status: Backend.Status) {
         switch status {
         case .starting:
-            // First launch: the windows are already showing their launch view
-            // and there is nothing to say. Otherwise this is a recovery, and
-            // the page has to come out — the address it was loaded from has
-            // gone, and the next server gets a port of its own.
-            let recovering = serverURL != nil
-            serverURL = nil
-            for studex in windows {
-                studex.showLaunch(message: recovering ? "Reconnecting…" : "Starting Studex…")
-            }
+            // Requests made in the meantime are held rather than refused, so
+            // a restart that finishes quickly is not visible at all.
+            InterfaceScheme.shared.setAddress(nil)
+            guard !interfaceReady else { break }
+            for studex in windows { studex.showLaunch() }
 
         case .ready(let url):
-            serverURL = url
-            for studex in windows {
-                studex.showInterface(at: url, zoom: Self.rememberedZoom())
+            InterfaceScheme.shared.setAddress(url)
+            interfaceReady = true
+            for studex in windows where !studex.isShowingInterface {
+                studex.showInterface(zoom: Self.rememberedZoom())
             }
 
         case .unavailable(let error):
@@ -328,6 +331,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .alertFirstButtonReturn:
             // Every window goes back to its launch screen and comes back on
             // the screen it was showing: each one remembers its own route.
+            interfaceReady = false
             for studex in windows { studex.showLaunch(message: "Reconnecting…") }
             backend.start()
         case .alertThirdButtonReturn:
