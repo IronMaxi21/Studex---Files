@@ -9,12 +9,12 @@
 Notes, an infinite canvas, flashcards, your exam board's specification and the
 revision timetable — one native Mac app, working offline, on your own disk.
 
-[![Latest release](https://img.shields.io/badge/release-v1.2.0-5a4fcf)](https://github.com/IronMaxi21/Studex-releases/releases/latest)
+[![Latest release](https://img.shields.io/badge/release-v4.0-5a4fcf)](https://github.com/IronMaxi21/Studex-releases/releases/latest)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%20Ventura%20or%20later-1c1a4a)](#requirements)
 [![Apple silicon](https://img.shields.io/badge/Apple%20silicon-arm64-444)](#requirements)
 [![Free to start](https://img.shields.io/badge/free-no%20card%20required-2e7d5b)](#free-vs-pro)
 
-<a href="https://github.com/IronMaxi21/Studex-releases/releases/download/v1.2.0/Studex-1.2.0.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/e3179be1-8416-4b8a-b417-743e1ecc67d6" alt="Download for macOS" /></a>
+<a href="https://github.com/IronMaxi21/Studex-releases/releases/download/v4.0/Studex-4.0.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/e3179be1-8416-4b8a-b417-743e1ecc67d6" alt="Download for macOS" /></a>
 
 Once downloaded, open the `.dmg` and move **Studex** to your `/Applications` folder.
 
@@ -69,6 +69,12 @@ actually keep getting wrong.
 
 - A real block editor — headings, bullets, numbered lists, to-dos, tables,
   quotes, code and images, nested as deep as the topic goes.
+- **Columns inside one page.** Put bullets side by side to build a dashboard,
+  a comparison chart or a pros-and-cons list — as a columns block of its own,
+  or by folding an existing bullet's children into columns.
+- **Colour the words.** Five colours and grey, picked from swatches in the
+  toolbar, for the definition, the exception and the line that matters less.
+  Highlighting picks from swatches too. Both print.
 - **Two notes side by side.** Split the workspace and put the past paper next
   to your answer. Drag the divider; both halves stay live.
 - **PDF and slide annotation.** Drop in lecture slides or a past paper and mark
