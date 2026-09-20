@@ -180,8 +180,8 @@ Free is not a trial. It doesn't expire, and it doesn't ask for a card.
 | Imported PDFs | 5 | Unlimited |
 | Spaced repetition, focus timer | ✓ | ✓ |
 | Exam and assignment tracker | ✓ | ✓ |
-| Revision timetable builder | ✓ | ✓ |
-| Statistics history | ✓ | ✓ |
+| Revision timetable builder | - | ✓ |
+| Statistics history | 30 days | All |
 | PDF and slide annotation | Within the 5-PDF cap | Unlimited |
 | Handwriting conversion | — | ✓ |
 | Offline folder caching | — | Every folder |
