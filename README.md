@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://github.com/IronMaxi21/studex/blob/main/studex-mark.png" alt="Studex" width="96">
+<img src="https://github.com/IronMaxi21/studex---files/blob/main/studex-mark.png" alt="Studex" width="96">
 
 # Studex
 
@@ -64,7 +64,7 @@ actually keep getting wrong.
 
 ### Notes that build understanding
 
-<img src="https://github.com/IronMaxi21/studex/blob/main/app-library2.jpg" alt="A document open beside the subject rail" width="710">
+<img src="https://github.com/IronMaxi21/studex---files/blob/main/app-library2.jpg" alt="A document open beside the subject rail" width="710">
 
 - A real block editor — headings, bullets, numbered lists, to-dos, tables,
   quotes, code and images, nested as deep as the topic goes.
@@ -84,7 +84,7 @@ actually keep getting wrong.
 
 ### A canvas for the messy thinking
 
-<img src="https://github.com/IronMaxi21/studex/blob/main/app-canvas.png" alt="An infinite canvas with ink, nodes and a flashcard" width="710">
+<img src="https://github.com/IronMaxi21/studex---files/blob/main/app-canvas.png" alt="An infinite canvas with ink, nodes and a flashcard" width="710">
 
 Not every idea arrives in order. Spread it out first, tidy it into a document
 once you can see the shape of it.
@@ -97,7 +97,7 @@ once you can see the shape of it.
 
 ### Cards that come back when you'd forget
 
-<img src="https://github.com/IronMaxi21/studex/blob/main/app-review.jpg" alt="A card in review with Again, Hard, Good and Easy" width="710">
+<img src="https://github.com/IronMaxi21/studex---files/blob/main/app-review.jpg" alt="A card in review with Again, Hard, Good and Easy" width="710">
 
 - Highlight a line in a note and it becomes a card, still attached to the note
   it came from.
@@ -113,7 +113,7 @@ once you can see the shape of it.
 
 ### Your specification, marked out of five
 
-<img src="https://github.com/IronMaxi21/studex/blob/main/app-topics.jpg" alt="The topic matrix, each topic rated one to five" width="710">
+<img src="https://github.com/IronMaxi21/studex---files/blob/main/app-topics.jpg" alt="The topic matrix, each topic rated one to five" width="710">
 
 - Drop in your exam board's specification — PDF, Word or plain text — and
   Studex reads the topic list out of it. **The file is parsed on your Mac.**
@@ -123,7 +123,7 @@ once you can see the shape of it.
 
 ### A plan you didn't have to write
 
-<img src="https://github.com/IronMaxi21/studex/blob/main/app-calendar.jpg" alt="Exams, deadlines and study blocks in the calendar" width="710">
+<img src="https://github.com/IronMaxi21/studex---files/blob/main/app-calendar.jpg" alt="Exams, deadlines and study blocks in the calendar" width="710">
 
 - Exams, assignments, classes and study blocks in one calendar, each with a
   countdown and a readiness score.
@@ -138,7 +138,7 @@ once you can see the shape of it.
 
 ### Numbers that tell you what to do next
 
-<img src="https://github.com/IronMaxi21/studex/blob/main/app-statistics.jpg" alt="Streak, hours logged, recall accuracy and exam readiness" width="710">
+<img src="https://github.com/IronMaxi21/studex---files/blob/main/app-statistics.jpg" alt="Streak, hours logged, recall accuracy and exam readiness" width="710">
 
 Current streak (with freezes that bank up while you keep going), hours logged
 by the focus timer, recall accuracy per subject, and a **Ready / On track /
